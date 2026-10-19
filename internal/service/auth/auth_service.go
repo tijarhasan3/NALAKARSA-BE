@@ -107,11 +107,14 @@ func (s *authService) Register(req dto.RegisterRequest, ctx *dto.AuthRequestCont
 		return nil, err
 	}
 	if s.email != nil {
-		if err := s.sendVerificationEmail(u); err != nil {
-			logEmailStatus("VERIFICATION", u.Email, err)
-		} else {
-			logEmailStatus("VERIFICATION", u.Email, nil)
-		}
+
+		go func(user *model.User) {
+			if err := s.sendVerificationEmail(user); err != nil {
+				logEmailStatus("VERIFICATION", user.Email, err)
+			} else {
+				logEmailStatus("VERIFICATION", user.Email, nil)
+			}
+		}(u)
 	}
 	accessTokenPayload, err := utils.GenerateAccessToken(u.ID, u.Email, u.Role, s.cfg.JWTSecret, s.cfg.JWTAccessExpiration)
 	if err != nil {
@@ -579,10 +582,11 @@ func (s *emailSender) send(to string, message emailMessage) error {
 	headers := "From: " + s.cfg.SMTPFrom + "\r\n" + "To: " + to + "\r\n" + "Subject: " + message.subject + "\r\n" + "MIME-Version: 1.0\r\n" + "Content-Type: text/html; charset=UTF-8\r\n\r\n"
 
 	if port == "587" {
-		rawConn, err := net.DialTimeout("tcp", address, 15*time.Second)
+		rawConn, err := net.DialTimeout("tcp", address, 8*time.Second)
 		if err != nil {
 			return fmt.Errorf("SMTP connection failed: %w", err)
 		}
+		_ = rawConn.SetDeadline(time.Now().Add(8 * time.Second))
 		conn, err := smtp.NewClient(rawConn, s.cfg.SMTPHost)
 		if err != nil {
 			_ = rawConn.Close()

@@ -1,0 +1,1500 @@
+﻿openapi: 3.0.3
+info:
+  title: Nalakarsa Collaboration Ecosystem API
+  description: Dokumen spesifikasi API untuk Nalakarsa Backend. Menghubungkan Akademisi, Praktisi, dan Profesional.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrasi Akun Baru
+      description: Mendaftarkan akun baru dan detail profil secara bersamaan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+                - fullName
+                - affiliation
+                - location
+                - expertise
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: dosen@nalakarsa.id
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+                role:
+                  type: string
+                  enum: [akademisi, praktisi, profesional]
+                  example: akademisi
+                fullName:
+                  type: string
+                  example: Dr. Ir. Budi Santoso
+                prefixTitle:
+                  type: string
+                  example: Dr.
+                suffixTitle:
+                  type: string
+                  example: M.T.
+                affiliation:
+                  type: string
+                  example: Universitas Indonesia
+                location:
+                  type: string
+                  example: Depok, Indonesia
+                expertise:
+                  type: string
+                  example: Internet of Things & AI
+                bio:
+                  type: string
+                  example: Menghubungkan riset akademik ke industri nyata.
+                security_question:
+                  type: string
+                  enum: [favorite_animal, mother_name]
+                  example: favorite_animal
+                security_answer:
+                  type: string
+                  example: kucing
+                avatar_url:
+                  type: string
+                  example: ""
+      responses:
+        '201':
+          description: Registrasi Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponseRegister'
+        '400':
+          description: Input tidak valid atau email sudah terdaftar
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login Pengguna
+      description: Autentikasi menggunakan email dan password untuk mendapatkan JWT tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: dosen@nalakarsa.id
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login Berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponseLogin'
+        '401':
+          description: Kredensial salah
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh Access Token
+      description: Memperbarui access token yang kadaluwarsa menggunakan refresh token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  example: eyJhbGciOi...
+      responses:
+        '200':
+          description: Token baru berhasil di-generate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponseRefresh'
+        '401':
+          description: Refresh token tidak valid atau kadaluwarsa
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset
+      description: Memverifikasi pertanyaan keamanan dan mengembalikan token reset sementara. Pengiriman email belum digunakan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, security_question, security_answer]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@company.com
+                security_question:
+                  type: string
+                  enum: [favorite_animal, mother_name]
+                  example: favorite_animal
+                security_answer:
+                  type: string
+                  example: kucing
+      responses:
+        '200':
+          description: Security verification successful; reset token returned
+        '400':
+          description: Security answer is incorrect or request is invalid
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password
+      description: Mengubah password menggunakan token reset dari endpoint forgot-password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                  description: Token dari query parameter link email
+                new_password:
+                  type: string
+                  minLength: 6
+                  maxLength: 72
+                  example: NewPassword123!
+      responses:
+        '200':
+          description: Password reset successfully
+        '400':
+          description: Token tidak valid atau sudah kedaluwarsa
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout Pengguna
+      description: Mencabut refresh token agar tidak bisa digunakan kembali.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  example: eyJhbGciOi...
+      responses:
+        '200':
+          description: Logout berhasil
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get Profile Sendiri
+      description: Mengambil data profil lengkap milik pengguna yang sedang login.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profil berhasil dimuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponseProfile'
+    patch:
+      tags: [Users]
+      summary: Update Profile Sendiri
+      description: Memperbarui data profil pengguna aktif.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - affiliation
+                - location
+                - expertise
+              properties:
+                fullName:
+                  type: string
+                  example: Dr. Ir. Budi Santoso, M.T.
+                prefixTitle:
+                  type: string
+                  example: Dr.
+                suffixTitle:
+                  type: string
+                  example: M.T.
+                affiliation:
+                  type: string
+                  example: Universitas Indonesia
+                location:
+                  type: string
+                  example: Jakarta, Indonesia
+                expertise:
+                  type: string
+                  example: IoT & Kecerdasan Buatan
+                bio:
+                  type: string
+                  example: Menghubungkan riset akademik ke industri nyata secara agresif.
+                avatar_url:
+                  type: string
+                  example: ""
+      responses:
+        '200':
+          description: Profil berhasil diperbarui
+
+  /users:
+    get:
+      tags: [Users]
+      summary: Cari Direktori Pengguna
+      description: Mendapatkan daftar profil seluruh pengguna terdaftar dengan filter pencarian dan peran.
+      parameters:
+        - name: search
+          in: query
+          description: Kata kunci pencarian (nama, affiliation, keahlian)
+          required: false
+          schema:
+            type: string
+        - name: role
+          in: query
+          description: Filter peran (akademisi, praktisi, profesional)
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Halaman data (default 1)
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Jumlah data per halaman (default 10)
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Daftar profil berhasil diambil
+
+  /conversations:
+    get:
+      tags: [Conversations]
+      summary: List direct conversations
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses: { '200': { description: Conversations returned } }
+  /conversations/direct:
+    post:
+      tags: [Conversations]
+      summary: Get or create direct conversation
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_user_id]
+              properties: { target_user_id: { type: string, format: uuid } }
+      responses: { '200': { description: Conversation returned } }
+  /conversations/{id}/messages:
+    get:
+      tags: [Conversations]
+      summary: List direct messages
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' }, { $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' } ]
+      responses: { '200': { description: Messages returned } }
+    post:
+      tags: [Conversations]
+      summary: Send direct message
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendMessageRequest' }
+      responses: { '201': { description: Message sent } }
+  /conversations/{id}/attachments:
+    post:
+      tags: [Conversations]
+      summary: Upload direct chat attachment
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties: { file: { type: string, format: binary } }
+      responses: { '201': { description: Attachment uploaded } }
+  /conversations/{id}/read:
+    patch:
+      tags: [Conversations]
+      summary: Mark direct messages as read
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Messages marked as read } }
+  /chat/contacts:
+    get:
+      tags: [Conversations]
+      summary: List chat contacts
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Contacts returned } }
+  /chat/start:
+    post:
+      tags: [Conversations]
+      summary: Start chat by name and role
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, role]
+              properties: { name: { type: string }, role: { type: string } }
+      responses: { '201': { description: Chat started } }
+  /chat/contacts/{id}/messages:
+    get:
+      tags: [Conversations]
+      summary: List chat messages alias
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Messages returned } }
+    post:
+      tags: [Conversations]
+      summary: Send chat message alias
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendMessageRequest' }
+      responses: { '201': { description: Message sent } }
+  /chat/contacts/{id}/attachments:
+    post:
+      tags: [Conversations]
+      summary: Upload chat attachment alias
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses: { '201': { description: Attachment uploaded } }
+  /chats/groups:
+    get:
+      tags: [Group Chat]
+      summary: List group chats
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Group chats returned } }
+  /chats/groups/{groupId}/messages:
+    get:
+      tags: [Group Chat]
+      summary: List group messages
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/GroupID' }, { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Limit' } ]
+      responses: { '200': { description: Group messages returned } }
+    post:
+      tags: [Group Chat]
+      summary: Send group message
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/GroupID' } ]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SendGroupMessageRequest' }
+      responses: { '201': { description: Group message sent } }
+  /chats/groups/{groupId}/attachments:
+    post:
+      tags: [Group Chat]
+      summary: Upload group chat attachment
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/GroupID' } ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file], properties: { file: { type: string, format: binary } } }
+      responses: { '201': { description: Group attachment uploaded } }
+  /chats/messages/{id}:
+    delete:
+      tags: [Conversations]
+      summary: Delete chat message
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Message deleted } }
+
+  /users/me/projects:
+    get:
+      tags: [Users]
+      summary: List my projects
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Projects returned } }
+  /users/me/stats:
+    get:
+      tags: [Users]
+      summary: Get my statistics
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Statistics returned } }
+  /users/me/followers:
+    get:
+      tags: [Users]
+      summary: List my followers
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Limit' } ]
+      responses: { '200': { description: Followers returned } }
+  /users/me/following:
+    get:
+      tags: [Users]
+      summary: List users I follow
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Limit' } ]
+      responses: { '200': { description: Following returned } }
+  /users/{id}/follow:
+    post:
+      tags: [Users]
+      summary: Follow or unfollow user
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Follow state changed } }
+  /users/suggestions:
+    get:
+      tags: [Users]
+      summary: Get user suggestions
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Suggestions returned } }
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Dashboard returned } }
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard summary
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Summary returned } }
+  /dashboard/ongoing-projects:
+    get:
+      tags: [Dashboard]
+      summary: Get ongoing projects
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Projects returned } }
+  /dashboard/notifications:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard notifications
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Notifications returned } }
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Notifications returned } }
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Notification updated } }
+  /notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Notifications updated } }
+
+  /homepage/hero:
+    get: { tags: [Reference], summary: Get homepage hero, responses: { '200': { description: Hero returned } } }
+  /homepage/sections:
+    get: { tags: [Reference], summary: Get homepage sections, responses: { '200': { description: Sections returned } } }
+  /homepage/testimonials:
+    get: { tags: [Reference], summary: Get homepage testimonials, responses: { '200': { description: Testimonials returned } } }
+  /expertise/search:
+    get:
+      tags: [Reference]
+      summary: Search expertise
+      description: Mencari bidang keahlian dari data spesifikasi.
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Expertise returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+  /expertise:
+    post:
+      tags: [Reference]
+      summary: Create expertise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReferenceRequest' }
+      responses:
+        '201': { description: Expertise created or existing expertise returned }
+        '400': { description: Invalid name }
+  /skills/search:
+    get:
+      tags: [Profile Skills]
+      summary: Search profile skills
+      description: Mencari skill yang tersedia untuk dipilih pada profile.
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Skills returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillResponse'
+  /skills:
+    post:
+      tags: [Profile Skills]
+      summary: Create a skill catalog item
+      description: Menambahkan skill baru ke katalog. Nama yang sama tidak dibuat ulang.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSkillRequest'
+      responses:
+        '201': { description: Skill created or existing skill returned }
+        '400': { description: Invalid name }
+  /users/me/skills:
+    get:
+      tags: [Profile Skills]
+      summary: Get my profile skills
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: User skills returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillResponse'
+    post:
+      tags: [Profile Skills]
+      summary: Add a skill to my profile
+      description: Gunakan skill_id untuk skill yang sudah tersedia atau name untuk membuat skill baru sekaligus menghubungkannya ke profile.
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserSkillRequest'
+      responses:
+        '201': { description: Skill added to profile }
+        '400': { description: Invalid skill or payload }
+  /users/me/skills/{skill_id}:
+    delete:
+      tags: [Profile Skills]
+      summary: Remove a skill from my profile
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: skill_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Skill removed from profile }
+        '400': { description: Invalid skill ID or skill is not assigned }
+  /skills/users/{user_id}:
+    get:
+      tags: [Profile Skills]
+      summary: Get skills on a public profile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: User skills returned }
+        '400': { description: Invalid user ID }
+  /knowledge:
+    post:
+      tags: [Reference]
+      summary: Create knowledge field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReferenceRequest' }
+      responses:
+        '201': { description: Knowledge field created or existing field returned }
+        '400': { description: Invalid name }
+  /industries/search:
+    get:
+      tags: [Reference]
+      summary: Search official industry sectors
+      description: Mencari sektor industri resmi untuk role Praktisi.
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Industry suggestions returned
+  /industries:
+    post:
+      tags: [Reference]
+      summary: Create industry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReferenceRequest' }
+      responses:
+        '201': { description: Industry created or existing industry returned }
+        '400': { description: Invalid name }
+  /locations/search:
+    get:
+      tags: [Reference]
+      summary: Search locations
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - name: type
+          in: query
+          schema: { type: string, enum: [province, city] }
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: Locations returned } }
+  /locations/provinces:
+    get:
+      tags: [Reference]
+      summary: Search provinces
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: Provinces returned } }
+  /locations/cities:
+    get:
+      tags: [Reference]
+      summary: Search cities
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - name: provinceId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Limit'
+      responses: { '200': { description: Cities returned } }
+  /institutions/search:
+    get: { tags: [Reference], summary: Search institutions, parameters: [ { $ref: '#/components/parameters/Search' }, { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Limit' } ], responses: { '200': { description: Institutions returned } } }
+  /institutions:
+    post:
+      tags: [Reference]
+      summary: Create institution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReferenceRequest' }
+      responses:
+        '201': { description: Institution created or existing institution returned }
+        '400': { description: Invalid name }
+  /organizations/search:
+    get:
+      tags: [Reference]
+      summary: Search domestic organizations
+      description: Mengambil instansi pemerintah dan perusahaan dalam negeri dengan pagination.
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Organizations returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrganizationResponse'
+  /organizations:
+    post:
+      tags: [Reference]
+      summary: Create domestic organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrganizationRequest'
+      responses:
+        '201': { description: Organization created or existing organization returned }
+        '400': { description: Invalid organization data }
+  /knowledge/search:
+    get:
+      tags: [Reference]
+      summary: Search knowledge fields
+      description: Mencari bidang keilmuan secara langsung.
+      parameters:
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Knowledge fields returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeFieldResponse'
+
+  /projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      parameters: [ { $ref: '#/components/parameters/Search' }, { $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/Limit' } ]
+      responses: { '200': { description: Projects returned } }
+    post:
+      tags: [Projects]
+      summary: Create project
+      security: [{ BearerAuth: [] }]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '201': { description: Project created } }
+  /projects/{id}:
+    get:
+      tags: [Projects]
+      summary: Get project
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Project returned } }
+    patch:
+      tags: [Projects]
+      summary: Update project
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '200': { description: Project updated } }
+    delete:
+      tags: [Projects]
+      summary: Delete project
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Project deleted } }
+  /projects/{id}/members:
+    get:
+      tags: [Projects]
+      summary: List project members
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Members returned } }
+  /projects/{id}/applications:
+    get:
+      tags: [Projects]
+      summary: List project applications
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Applications returned } }
+    post:
+      tags: [Projects]
+      summary: Apply to project
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '201': { description: Application submitted } }
+  /projects/{id}/applications/{applicationId}:
+    patch:
+      tags: [Projects]
+      summary: Update application status
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' }, { name: applicationId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '200': { description: Application updated } }
+  /projects/{id}/milestones:
+    post:
+      tags: [Projects]
+      summary: Create project milestone
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '201': { description: Milestone created } }
+  /projects/{id}/milestones/{milestoneId}:
+    patch:
+      tags: [Projects]
+      summary: Update project milestone
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' }, { name: milestoneId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '200': { description: Milestone updated } }
+  /connections:
+    get:
+      tags: [Connections]
+      summary: List connections
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Connections returned } }
+  /partners:
+    get:
+      tags: [Connections]
+      summary: List partners alias
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Partners returned } }
+  /users/me/partners:
+    get:
+      tags: [Users]
+      summary: List my partners
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Partners returned } }
+  /connections/requests:
+    get:
+      tags: [Connections]
+      summary: List connection requests
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Requests returned } }
+    post:
+      tags: [Connections]
+      summary: Send connection request
+      security: [{ BearerAuth: [] }]
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '201': { description: Request sent } }
+  /connections/requests/{id}/accept:
+    patch:
+      tags: [Connections]
+      summary: Accept connection request
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Request accepted } }
+  /connections/requests/{id}/reject:
+    patch:
+      tags: [Connections]
+      summary: Reject connection request
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Request rejected } }
+  /connections/requests/{id}:
+    delete:
+      tags: [Connections]
+      summary: Cancel connection request
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Request cancelled } }
+  /connections/{userId}:
+    delete:
+      tags: [Connections]
+      summary: Remove connection
+      security: [{ BearerAuth: [] }]
+      parameters: [ { name: userId, in: path, required: true, schema: { type: string, format: uuid } } ]
+      responses: { '200': { description: Connection removed } }
+
+  /discussions:
+    get:
+      tags: [Discussions]
+      summary: Daftar Diskusi
+      description: Mengambil seluruh topik diskusi publik dengan pagination, pencarian teks, dan filter.
+      parameters:
+        - name: search
+          in: query
+          description: Cari judul atau konten diskusi
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: Filter berdasarkan kategori (contoh Tech, Research)
+          required: false
+          schema:
+            type: string
+        - name: role
+          in: query
+          description: Filter berdasarkan peran pembuat diskusi
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Urutan data (newest, oldest)
+          required: false
+          schema:
+            type: string
+            default: newest
+      responses:
+        '200':
+          description: Daftar topik diskusi berhasil dimuat
+    post:
+      tags: [Discussions]
+      summary: Buat Topik Diskusi
+      description: Membuat topik diskusi baru di forum.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - content
+                - category
+              properties:
+                title:
+                  type: string
+                  example: Tips Optimasi Query GORM PostgreSQL
+                content:
+                  type: string
+                  example: Rekan-rekan, pastikan menggunakan preload secara bijak agar terhindar dari N+1 query...
+                category:
+                  type: string
+                  example: Tech
+                tags:
+                  type: string
+                  example: gorm,postgres,go
+      responses:
+        '201':
+          description: Topik diskusi berhasil dibuat
+
+  /discussions/{id}:
+    get:
+      tags: [Discussions]
+      summary: Detail Diskusi
+      description: Mengambil detail topik diskusi beserta seluruh komentar di dalamnya.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail diskusi berhasil dimuat
+    put:
+      tags: [Discussions]
+      summary: Update Topik Diskusi
+      description: Memperbarui topik diskusi pribadi (Hanya untuk pemilik topik).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - content
+                - category
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                category:
+                  type: string
+                tags:
+                  type: string
+      responses:
+        '200':
+          description: Diskusi diperbarui
+        '403':
+          description: Bukan pemilik topik
+    delete:
+      tags: [Discussions]
+      summary: Hapus Topik Diskusi
+      description: Menghapus topik diskusi pribadi (Hanya untuk pemilik topik).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Diskusi berhasil dihapus
+
+  /discussions/{id}/comments:
+    post:
+      tags: [Discussions]
+      summary: Tambah Komentar Diskusi
+      description: Memberikan tanggapan/komentar di suatu topik diskusi.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  example: Penjelasan yang sangat bermanfaat, terima kasih!
+      responses:
+        '201':
+          description: Komentar ditambahkan
+
+  /collaborations:
+    get:
+      tags: [Projects]
+      summary: Daftar Proyek Kolaborasi
+      description: Menampilkan seluruh lowongan tawaran proyek kolaborasi multi-peran.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: role_required
+          in: query
+          description: Mencari peran tertentu (akademisi, praktisi, profesional)
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Status proyek (open, in_progress, closed)
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Daftar kolaborasi berhasil dimuat
+    post:
+      tags: [Projects]
+      summary: Ajukan Proyek Kolaborasi
+      description: Membuat postingan tawaran kolaborasi proyek baru.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - role_required
+              properties:
+                title:
+                  type: string
+                  example: Hilirisasi Alat IoT Pengukur Kadar Nitrogen Tanah
+                description:
+                  type: string
+                  example: Kami telah membuat prototipe perangkat dan membutuhkan praktisi untuk uji pasar dan pabrikasi.
+                role_required:
+                  type: string
+                  enum: [akademisi, praktisi, profesional]
+                  example: praktisi
+      responses:
+        '201':
+          description: Proposal berhasil diajukan
+
+  /collaborations/{id}/apply:
+    post:
+      tags: [Projects]
+      summary: Lamar Kolaborasi
+      description: Mengirim pesan ketertarikan untuk bergabung dalam proyek (Peran pelamar harus cocok dengan role_required).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: Halo, kami dari perusahaan perkebunan berminat untuk menyediakan lahan dan pendanaan uji coba.
+      responses:
+        '201':
+          description: Lamaran berhasil dikirim
+        '400':
+          description: Validasi gagal (misal peran tidak cocok atau sudah melamar sebelumnya)
+
+  /collaborations/{id}/applications:
+    get:
+      tags: [Projects]
+      summary: Lihat Pelamar Kolaborasi
+      description: Melihat daftar pengguna yang melamar proyek kolaborasi (Hanya pemilik proyek).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Daftar pelamar berhasil dimuat
+        '403':
+          description: Bukan pemilik proyek kolaborasi
+
+  /collaborations/{id}/applications/{app_id}:
+    put:
+      tags: [Projects]
+      summary: Kelola Status Lamaran
+      description: Menerima atau menolak lamaran kolaborasi (Hanya pemilik proyek).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: app_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [accepted, rejected]
+                  example: accepted
+      responses:
+        '200':
+          description: Status lamaran berhasil diperbarui
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ID:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    GroupID:
+      name: groupId
+      in: path
+      required: true
+      schema: { type: string }
+    Search:
+      name: q
+      in: query
+      schema: { type: string }
+      description: Kata kunci pencarian
+    DomainID:
+      name: domain_id
+      in: query
+      required: true
+      schema: { type: string, format: uuid }
+    SubdomainID:
+      name: subdomain_id
+      in: query
+      required: false
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 10 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+  schemas:
+    SkillResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: Machine Learning }
+    CreateSkillRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: Quantum Computing
+    AddUserSkillRequest:
+      type: object
+      description: Isi salah satu, skill_id atau name.
+      properties:
+        skill_id: { type: string, format: uuid }
+        name: { type: string, example: Quantum Computing }
+    CreateReferenceRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: Universitas Contoh
+    CreateOrganizationRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+          example: PT Contoh Indonesia
+    OrganizationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationSuggestion'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        message:
+          type: string
+    OrganizationSuggestion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        countryCode: { type: string, example: ID }
+        country: { type: string, example: Indonesia }
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer, example: 1 }
+        total_pages: { type: integer, example: 2 }
+        total_items: { type: integer, format: int64, example: 10 }
+        limit: { type: integer, example: 10 }
+    SendMessageRequest:
+      type: object
+      properties:
+        text: { type: string, maxLength: 5000 }
+        body: { type: string }
+        attachment_path: { type: string }
+        attachment_name: { type: string }
+        attachment_mime_type: { type: string }
+        attachment_size: { type: integer, format: int64 }
+        attachment_type: { type: string, enum: [image, file] }
+    SendGroupMessageRequest:
+      type: object
+      properties:
+        text: { type: string }
+        content: { type: string }
+        attachment_path: { type: string }
+        attachment_name: { type: string }
+        attachment_mime_type: { type: string }
+        attachment_size: { type: integer, format: int64 }
+        attachment_type: { type: string, enum: [image, file] }
+    APIResponseRegister:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Registrasi berhasil
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            role:
+              type: string
+    APIResponseLogin:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Login berhasil
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            expires_in:
+              type: integer
+            user:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                role:
+                  type: string
+    APIResponseRefresh:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            expires_in:
+              type: integer
+    APIResponseProfile:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            role:
+              type: string
+            profile:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                prefixTitle:
+                  type: string
+                suffixTitle:
+                  type: string
+                affiliation:
+                  type: string
+                location:
+                  type: string
+                expertise:
+                  type: string
+                bio:
+                  type: string
+                avatar_url:
+                  type: string
+    KnowledgeFieldResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              subdomain_id: { type: string, format: uuid }
+              subdomain_name: { type: string }
+              domain_id: { type: string, format: uuid }
+              domain_name: { type: string }
+              name: { type: string }
+        message: { type: string }
+
+
+
+

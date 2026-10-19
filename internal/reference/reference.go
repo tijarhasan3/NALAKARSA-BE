@@ -1,0 +1,38 @@
+package reference
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+
+	"nalakarsa/internal/contentfilter"
+)
+
+var namePattern = regexp.MustCompile(`^[\p{L}\p{N}][\p{L}\p{N} .,&'()/;:+-]{1,254}$`)
+var numberingPrefixPattern = regexp.MustCompile(`^\s*\(?\d+[.)]\s*`)
+var numberingSuffixPattern = regexp.MustCompile(`\s+\d+\s*$`)
+
+func NormalizeName(value string) (string, error) {
+	name := strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+	name = numberingPrefixPattern.ReplaceAllString(name, "")
+	name = numberingSuffixPattern.ReplaceAllString(name, "")
+	name = strings.Join(strings.Fields(name), " ")
+	if len([]rune(name)) < 2 || len([]rune(name)) > 255 || !namePattern.MatchString(name) {
+		return "", fmt.Errorf("name contains invalid characters or length")
+	}
+	if err := contentfilter.Validate(name); err != nil {
+		return "", err
+	}
+	return name, nil
+}
+
+func NormalizeInstitutionName(value string) (string, error) {
+	name, err := NormalizeName(value)
+	if err != nil {
+		return "", err
+	}
+	if canonical, ok := institutionAliases[strings.ToLower(name)]; ok {
+		return canonical, nil
+	}
+	return name, nil
+}

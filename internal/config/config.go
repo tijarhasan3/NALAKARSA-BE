@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -48,14 +49,20 @@ func LoadConfig() *Config {
 		log.Println("Warning: No .env file found, reading from system environment variables.")
 	}
 
+	databaseURL := getEnv("DATABASE_URL", "")
+	// Railway resolves ${{...}} references only in Railway itself.
+	if strings.Contains(databaseURL, "${{") {
+		databaseURL = ""
+	}
+
 	return &Config{
 		Port:                    getEnv("PORT", "8080"),
 		Env:                     getEnv("ENV", "development"),
-		DBHost:                  getEnv("DB_HOST", "localhost"),
-		DBPort:                  getEnv("DB_PORT", "5432"),
-		DBUser:                  getEnv("DB_USER", "postgres"),
-		DBName:                  getEnv("DB_NAME", "nalakarsa"),
-		DatabaseURL:             getEnv("DATABASE_URL", ""),
+		DBHost:                  getEnv("DB_HOST", getEnv("PGHOST", "localhost")),
+		DBPort:                  getEnv("DB_PORT", getEnv("PGPORT", "5432")),
+		DBUser:                  getEnv("DB_USER", getEnv("PGUSER", "postgres")),
+		DBName:                  getEnv("DB_NAME", getEnv("PGDATABASE", "nalakarsa")),
+		DatabaseURL:             databaseURL,
 		DBSslMode:               getEnv("DB_SSLMODE", "disable"),
 		DBTimeZone:              getEnv("DB_TIMEZONE", "Asia/Jakarta"),
 		DBAutoMigrate:           getEnvAsBool("DB_AUTO_MIGRATE", true),
@@ -80,7 +87,7 @@ func LoadConfig() *Config {
 		SMTPFrom:                getEnv("SMTP_FROM", ""),
 		// DATABASE_URL is supplied by Railway's Postgres service. DB_PASSWORD is
 		// only needed when using the individual DB_* variables locally.
-		DBPassword:       getEnv("DB_PASSWORD", ""),
+		DBPassword:       getEnv("DB_PASSWORD", getEnv("PGPASSWORD", "")),
 		JWTSecret:        getEnvRequired("JWT_SECRET"),
 		JWTRefreshSecret: getEnvRequired("JWT_REFRESH_SECRET"),
 	}

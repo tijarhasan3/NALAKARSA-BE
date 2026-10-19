@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -15,15 +16,18 @@ import (
 )
 
 func InitDB(cfg *config.Config) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
-		cfg.DBHost,
-		cfg.DBUser,
-		cfg.DBPassword,
-		cfg.DBName,
-		cfg.DBPort,
-		cfg.DBSslMode,
-		cfg.DBTimeZone,
-	)
+	dsn := cfg.DatabaseURL
+	if dsn == "" {
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
+			cfg.DBHost,
+			cfg.DBUser,
+			cfg.DBPassword,
+			cfg.DBName,
+			cfg.DBPort,
+			cfg.DBSslMode,
+			cfg.DBTimeZone,
+		)
+	}
 
 	dbLogger := logger.New(
 		log.New(os.Stdout, "", 0),
@@ -51,13 +55,41 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		Logger: dbLogger,
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	retries := cfg.DBConnectRetries
+	if retries < 1 {
+		retries = 1
 	}
-	sqlDB, err := db.DB()
+	delay := time.Duration(cfg.DBConnectRetryDelaySec) * time.Second
+	if delay < 0 {
+		delay = 0
+	}
+
+	var db *gorm.DB
+	var sqlDB *sql.DB
+	var err error
+	for attempt := 1; attempt <= retries; attempt++ {
+		db, err = gorm.Open(postgres.Open(dsn), gormConfig)
+		if err == nil {
+			sqlDB, err = db.DB()
+		}
+		if err == nil {
+			err = sqlDB.Ping()
+		}
+		if err == nil {
+			break
+		}
+
+		if sqlDB != nil {
+			_ = sqlDB.Close()
+			sqlDB = nil
+		}
+		if attempt < retries {
+			log.Printf("Database unavailable (attempt %d/%d): %v. Retrying in %s...", attempt, retries, err, delay)
+			time.Sleep(delay)
+		}
+	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get sql.DB from gorm: %w", err)
+		return nil, fmt.Errorf("failed to connect to database after %d attempts: %w", retries, err)
 	}
 
 	sqlDB.SetMaxIdleConns(10)

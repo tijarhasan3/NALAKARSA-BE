@@ -16,9 +16,12 @@ type Config struct {
 	DBUser                  string
 	DBPassword              string
 	DBName                  string
+	DatabaseURL             string
 	DBSslMode               string
 	DBTimeZone              string
 	DBAutoMigrate           bool
+	DBConnectRetries        int
+	DBConnectRetryDelaySec  int
 	SupabaseURL             string
 	SupabaseServiceRoleKey  string
 	SupabaseStorageBucket   string
@@ -52,9 +55,12 @@ func LoadConfig() *Config {
 		DBPort:                  getEnv("DB_PORT", "5432"),
 		DBUser:                  getEnv("DB_USER", "postgres"),
 		DBName:                  getEnv("DB_NAME", "nalakarsa"),
+		DatabaseURL:             getEnv("DATABASE_URL", ""),
 		DBSslMode:               getEnv("DB_SSLMODE", "disable"),
 		DBTimeZone:              getEnv("DB_TIMEZONE", "Asia/Jakarta"),
 		DBAutoMigrate:           getEnvAsBool("DB_AUTO_MIGRATE", true),
+		DBConnectRetries:        getEnvAsInt("DB_CONNECT_RETRIES", 10),
+		DBConnectRetryDelaySec:  getEnvAsInt("DB_CONNECT_RETRY_DELAY_SECONDS", 2),
 		SupabaseURL:             getEnv("SUPABASE_URL", ""),
 		SupabaseServiceRoleKey:  getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
 		SupabaseStorageBucket:   getEnv("SUPABASE_STORAGE_BUCKET", ""),
@@ -72,7 +78,9 @@ func LoadConfig() *Config {
 		SMTPUsername:            getEnv("SMTP_USERNAME", ""),
 		SMTPPassword:            getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:                getEnv("SMTP_FROM", ""),
-		DBPassword:       getEnvRequired("DB_PASSWORD"),
+		// DATABASE_URL is supplied by Railway's Postgres service. DB_PASSWORD is
+		// only needed when using the individual DB_* variables locally.
+		DBPassword:       getEnv("DB_PASSWORD", ""),
 		JWTSecret:        getEnvRequired("JWT_SECRET"),
 		JWTRefreshSecret: getEnvRequired("JWT_REFRESH_SECRET"),
 	}

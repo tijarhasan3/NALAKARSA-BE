@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"net"
 	"net/smtp"
 	"strings"
 	"time"
@@ -578,8 +579,13 @@ func (s *emailSender) send(to string, message emailMessage) error {
 	headers := "From: " + s.cfg.SMTPFrom + "\r\n" + "To: " + to + "\r\n" + "Subject: " + message.subject + "\r\n" + "MIME-Version: 1.0\r\n" + "Content-Type: text/html; charset=UTF-8\r\n\r\n"
 
 	if port == "587" {
-		conn, err := smtp.Dial(address)
+		rawConn, err := net.DialTimeout("tcp", address, 15*time.Second)
 		if err != nil {
+			return fmt.Errorf("SMTP connection failed: %w", err)
+		}
+		conn, err := smtp.NewClient(rawConn, s.cfg.SMTPHost)
+		if err != nil {
+			_ = rawConn.Close()
 			return err
 		}
 		defer conn.Close()

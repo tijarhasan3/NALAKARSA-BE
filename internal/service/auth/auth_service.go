@@ -1,15 +1,18 @@
 package authservice
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"math/big"
 	"net"
+	"net/http"
 	"net/smtp"
 	"strings"
 	"time"
@@ -571,6 +574,9 @@ func (s *emailSender) sendPasswordChanged(to, name string) error {
 }
 
 func (s *emailSender) send(to string, message emailMessage) error {
+	if strings.TrimSpace(s.cfg.BrevoAPIKey) != "" {
+		return s.sendViaBrevoAPI(to, message)
+	}
 	if strings.TrimSpace(s.cfg.SMTPHost) == "" || strings.TrimSpace(s.cfg.SMTPUsername) == "" || strings.TrimSpace(s.cfg.SMTPPassword) == "" || strings.TrimSpace(s.cfg.SMTPFrom) == "" {
 		return fmt.Errorf("SMTP email is not configured")
 	}
@@ -616,4 +622,46 @@ func (s *emailSender) send(to string, message emailMessage) error {
 		return writer.Close()
 	}
 	return smtp.SendMail(address, smtp.PlainAuth("", s.cfg.SMTPUsername, s.cfg.SMTPPassword, s.cfg.SMTPHost), s.cfg.SMTPFrom, []string{to}, []byte(headers+message.body))
+}
+
+func (s *emailSender) sendViaBrevoAPI(to string, message emailMessage) error {
+	if strings.TrimSpace(s.cfg.SMTPFrom) == "" {
+		return fmt.Errorf("SMTP_FROM is not configured")
+	}
+	payload := struct {
+		Sender struct {
+			Email string `json:"email"`
+		} `json:"sender"`
+		To []struct {
+			Email string `json:"email"`
+		} `json:"to"`
+		Subject     string `json:"subject"`
+		HTMLContent string `json:"htmlContent"`
+	}{}
+	payload.Sender.Email = s.cfg.SMTPFrom
+	payload.To = []struct {
+		Email string `json:"email"`
+	}{{Email: to}}
+	payload.Subject = message.subject
+	payload.HTMLContent = message.body
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encode Brevo email: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodPost, "https://api.brevo.com/v3/smtp/email", bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create Brevo request: %w", err)
+	}
+	req.Header.Set("api-key", s.cfg.BrevoAPIKey)
+	req.Header.Set("content-type", "application/json")
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+	if err != nil {
+		return fmt.Errorf("Brevo API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("Brevo API returned HTTP %s", resp.Status)
+	}
+	return nil
 }

@@ -42,6 +42,7 @@ type Config struct {
 	SMTPUsername            string
 	SMTPPassword            string
 	SMTPFrom                string
+	BrevoAPIKey             string
 }
 
 func LoadConfig() *Config {
@@ -85,6 +86,7 @@ func LoadConfig() *Config {
 		SMTPUsername:            getEnv("SMTP_USERNAME", ""),
 		SMTPPassword:            getEnv("SMTP_PASSWORD", ""),
 		SMTPFrom:                getEnv("SMTP_FROM", ""),
+		BrevoAPIKey:             getEnv("BREVO_API_KEY", ""),
 		// DATABASE_URL is supplied by Railway's Postgres service. DB_PASSWORD is
 		// only needed when using the individual DB_* variables locally.
 		DBPassword:       getEnv("DB_PASSWORD", getEnv("PGPASSWORD", "")),

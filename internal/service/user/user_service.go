@@ -78,6 +78,10 @@ func (s *userService) GetPublicProfile(userID uuid.UUID) (*dto.UserProfileStatsR
 		return nil, errors.New("user not found")
 	}
 	_ = s.userRepo.IncrementViewCount(userID)
+	// Reload after increment so the response immediately reflects the visit.
+	if refreshed, refreshErr := s.userRepo.GetByID(userID); refreshErr == nil && refreshed != nil {
+		u = refreshed
+	}
 	connCount, _ := s.connRepo.CountAccepted(userID)
 	projCount, _ := s.projRepo.CountByOwner(userID, "")
 	discCount, _ := s.userRepo.CountDiscussions(userID)
@@ -89,6 +93,7 @@ func (s *userService) GetPublicProfile(userID uuid.UUID) (*dto.UserProfileStatsR
 			ConnectionCount: connCount,
 			ProjectCount:    projCount,
 			DiscussionCount: discCount,
+			ViewCount:       int64(u.ViewCount),
 		},
 	}, nil
 }
@@ -378,6 +383,7 @@ func toUserResponse(u *model.User) *dto.UserResponse {
 		Industry:    u.Industry,
 		Bio:         u.Bio,
 		AvatarURL:   u.AvatarURL,
+		ViewCount:   int64(u.ViewCount),
 	}
 }
 

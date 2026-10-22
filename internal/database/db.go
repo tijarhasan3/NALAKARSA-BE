@@ -133,6 +133,9 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 			&model.HomepageHero{},
 			&model.HomepageSection{},
 			&model.HomepageTestimonial{},
+			&model.Publication{},
+			&model.PublicationCollaborator{},
+			&model.PublicationSave{},
 		)
 
 		if err != nil {

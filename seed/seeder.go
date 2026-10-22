@@ -14,6 +14,9 @@ import (
 func SeedData(db *gorm.DB) error {
 	log.Println("Seeding database with default mock data...")
 	log.Println("Purging existing data...")
+	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.PublicationSave{})
+	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.PublicationCollaborator{})
+	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Publication{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.HomepageSection{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.HomepageHero{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.HomepageTestimonial{})
@@ -104,6 +107,9 @@ func SeedData(db *gorm.DB) error {
 		return err
 	}
 	if err := db.Create(profesionalUser).Error; err != nil {
+		return err
+	}
+	if err := seedPublications(db, akademisiUser, praktisiUser, profesionalUser); err != nil {
 		return err
 	}
 	disc1 := &model.Discussion{
@@ -301,6 +307,40 @@ func SeedData(db *gorm.DB) error {
 	}
 
 	log.Println("Mock data seeding successfully completed.")
+	return nil
+}
+
+func seedPublications(db *gorm.DB, users ...*model.User) error {
+	if len(users) < 3 {
+		return nil
+	}
+	types := []string{"CASE_STUDY", "PRACTICAL_ARTICLE", "APPLIED_RESEARCH", "POLICY_BRIEF", "IMPLEMENTATION_REPORT", "IMPLEMENTATION_GUIDE"}
+	categories := []string{"Teknologi", "Pendidikan", "Pertanian", "Kebijakan Publik", "Kesehatan", "Industri"}
+	titles := []string{
+		"Implementasi IoT untuk Monitoring Tanah Pertanian",
+		"Panduan Praktis Hilirisasi Hasil Riset",
+		"Model Kolaborasi Riset Terapan Perguruan Tinggi",
+		"Kebijakan Data Terbuka untuk Inovasi Daerah",
+		"Laporan Implementasi Sistem Informasi Kesehatan",
+		"Panduan Implementasi Transformasi Digital UMKM",
+	}
+	now := time.Now().UTC()
+	for i := range titles {
+		publication := model.Publication{
+			OwnerID: users[i%len(users)].ID, PublicationType: types[i], Title: titles[i],
+			Summary:  "Publikasi contoh untuk menguji publication feed dan kolaborasi Nalakarsa.",
+			Content:  "Konten publikasi contoh. Ganti dengan naskah dan hasil implementasi yang sebenarnya.",
+			Category: categories[i], Status: "PUBLISHED", CoverURL: "", PublishedAt: timePtr(now.Add(-time.Duration(i) * 24 * time.Hour)),
+		}
+		if err := db.Create(&publication).Error; err != nil {
+			return err
+		}
+		for j, user := range users {
+			if err := db.Create(&model.PublicationCollaborator{PublicationID: publication.ID, UserID: user.ID, ContributionRole: []string{"Penulis", "Mitra", "Reviewer"}[j], IsOwner: user.ID == publication.OwnerID}).Error; err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

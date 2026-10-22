@@ -21,6 +21,7 @@ import (
 	notificationhandler "nalakarsa/internal/handler/notification"
 	organizationhandler "nalakarsa/internal/handler/organization"
 	projecthandler "nalakarsa/internal/handler/project"
+	publicationhandler "nalakarsa/internal/handler/publication"
 	skillhandler "nalakarsa/internal/handler/skill"
 	userhandler "nalakarsa/internal/handler/user"
 	"nalakarsa/internal/middleware"
@@ -36,6 +37,7 @@ import (
 	notificationrepository "nalakarsa/internal/repository/notification"
 	organizationrepository "nalakarsa/internal/repository/organization"
 	projectrepository "nalakarsa/internal/repository/project"
+	publicationrepository "nalakarsa/internal/repository/publication"
 	skillrepository "nalakarsa/internal/repository/skill"
 	userrepository "nalakarsa/internal/repository/user"
 	authservice "nalakarsa/internal/service/auth"
@@ -52,6 +54,7 @@ import (
 	notificationservice "nalakarsa/internal/service/notification"
 	organizationservice "nalakarsa/internal/service/organization"
 	projectservice "nalakarsa/internal/service/project"
+	publicationservice "nalakarsa/internal/service/publication"
 	skillservice "nalakarsa/internal/service/skill"
 	userservice "nalakarsa/internal/service/user"
 	"nalakarsa/internal/utils"
@@ -71,6 +74,7 @@ import (
 	notificationroutes "nalakarsa/internal/routes/notification"
 	organizationroutes "nalakarsa/internal/routes/organization"
 	projectroutes "nalakarsa/internal/routes/project"
+	publicationroutes "nalakarsa/internal/routes/publication"
 	skillroutes "nalakarsa/internal/routes/skill"
 	userroutes "nalakarsa/internal/routes/user"
 	"nalakarsa/seed"
@@ -110,6 +114,7 @@ func main() {
 	skillRepo := skillrepository.NewSkillRepository(db)
 	connRepo := connectionrepository.NewConnectionRepository(db)
 	projRepo := projectrepository.NewProjectRepository(db)
+	publicationRepo := publicationrepository.NewPublicationRepository(db)
 	convRepo := conversationrepository.NewConversationRepository(db)
 	notifRepo := notificationrepository.NewNotificationRepository(db)
 	homeRepo := homerepository.NewHomepageRepository(db)
@@ -125,7 +130,8 @@ func main() {
 	skillService := skillservice.NewSkillService(skillRepo)
 	connService := connectionservice.NewConnectionService(connRepo, userRepo)
 	projService := projectservice.NewProjectService(projRepo, userRepo, discRepo, notifRepo)
-	convService := conversationservice.NewConversationService(convRepo, userRepo, cfg)
+	publicationService := publicationservice.NewPublicationService(publicationRepo)
+	convService := conversationservice.NewConversationService(convRepo, userRepo, notifRepo, cfg)
 	notifService := notificationservice.NewNotificationService(notifRepo)
 	dashService := dashboardservice.NewDashboardService(projRepo, connRepo, convRepo, notifRepo)
 	homeService := homepageService.NewHomepageService(homeRepo)
@@ -141,6 +147,7 @@ func main() {
 	skillHandler := skillhandler.NewSkillHandler(skillService)
 	connHandler := connectionhandler.NewConnectionHandler(connService)
 	projHandler := projecthandler.NewProjectHandler(projService)
+	publicationHandler := publicationhandler.NewPublicationHandler(publicationService)
 	convHandler := conversationhandler.NewConversationHandler(convService)
 	notifHandler := notificationhandler.NewNotificationHandler(notifService)
 	dashHandler := dashboardhandler.NewDashboardHandler(dashService)
@@ -162,6 +169,7 @@ func main() {
 	skillroutes.RegisterRoutes(v1, protected, skillHandler)
 	connectionroutes.RegisterRoutes(protected, connHandler)
 	projectroutes.RegisterRoutes(v1, protected, projHandler)
+	publicationroutes.RegisterRoutes(protected, publicationHandler)
 	institutionroutes.RegisterRoutes(v1, institutionHandler)
 	organizationroutes.RegisterRoutes(v1, organizationHandler)
 	locationroutes.RegisterRoutes(v1, locationHandler)

@@ -17,6 +17,7 @@ type ConversationRepository interface {
 	AddMember(member *model.ConversationMember) error
 	GetMember(conversationID, userID uuid.UUID) (*model.ConversationMember, error)
 	UpdateLastRead(conversationID, userID, messageID uuid.UUID) error
+	GetLastReadMessage(conversationID, userID uuid.UUID) (*model.Message, error)
 	CreateMessage(msg *model.Message) error
 	GetMessageByID(id uuid.UUID) (*model.Message, error)
 	DeleteMessage(id uuid.UUID) error
@@ -117,6 +118,27 @@ func (r *pgConversationRepository) UpdateLastRead(conversationID, userID, messag
 		Update("last_read_message_id", messageID).Error
 }
 
+func (r *pgConversationRepository) GetLastReadMessage(conversationID, userID uuid.UUID) (*model.Message, error) {
+	var member model.ConversationMember
+	if err := r.db.Where("conversation_id = ? AND user_id = ?", conversationID, userID).First(&member).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if member.LastReadMessageID == nil {
+		return nil, nil
+	}
+	var message model.Message
+	if err := r.db.Where("id = ? AND conversation_id = ?", *member.LastReadMessageID, conversationID).First(&message).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &message, nil
+}
+
 func (r *pgConversationRepository) CreateMessage(msg *model.Message) error {
 	return r.db.Create(msg).Error
 }
@@ -146,10 +168,12 @@ func (r *pgConversationRepository) CountUnread(conversationID, userID uuid.UUID)
 		SELECT COUNT(*) FROM messages m
 		WHERE m.conversation_id = ?
 		AND m.sender_id != ?
-		AND m.id > COALESCE(
-			(SELECT last_read_message_id FROM conversation_members WHERE conversation_id = ? AND user_id = ?),
-			'00000000-0000-0000-0000-000000000000'::uuid
-		)
+		AND m.created_at > COALESCE((
+			SELECT read_message.created_at
+			FROM conversation_members cm
+			LEFT JOIN messages read_message ON read_message.id = cm.last_read_message_id
+			WHERE cm.conversation_id = ? AND cm.user_id = ?
+		), 'epoch'::timestamptz)
 	`, conversationID, userID, conversationID, userID).Scan(&count).Error
 	return count, err
 }
@@ -159,8 +183,9 @@ func (r *pgConversationRepository) CountTotalUnread(userID uuid.UUID) (int64, er
 	err := r.db.Raw(`
 		SELECT COUNT(*) FROM messages m
 		INNER JOIN conversation_members cm ON cm.conversation_id = m.conversation_id AND cm.user_id = ?
+		LEFT JOIN messages last_read ON last_read.id = cm.last_read_message_id
 		WHERE m.sender_id != ?
-		AND m.id > COALESCE(cm.last_read_message_id, '00000000-0000-0000-0000-000000000000'::uuid)
+		AND m.created_at > COALESCE(last_read.created_at, 'epoch'::timestamptz)
 	`, userID, userID).Scan(&count).Error
 	return count, err
 }

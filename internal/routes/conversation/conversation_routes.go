@@ -13,6 +13,8 @@ func RegisterRoutes(protected *gin.RouterGroup, h *conversationhandler.Conversat
 	protected.POST("/conversations/:id/messages", h.SendMessage)
 	protected.POST("/conversations/:id/attachments", h.UploadAttachment)
 	protected.PATCH("/conversations/:id/read", h.MarkRead)
+	protected.PATCH("/chat/contacts/:id/read", h.MarkRead)
+	protected.PATCH("/chat/:id/read", h.MarkRead)
 	protected.GET("/chat/contacts", h.ListConversations)
 	protected.POST("/chat/start", h.StartChat)
 	protected.GET("/chat/contacts/:id/messages", h.ListMessages)

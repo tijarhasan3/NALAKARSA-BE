@@ -1,6 +1,7 @@
 package conversationservice
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -12,6 +13,7 @@ import (
 	"nalakarsa/internal/dto"
 	"nalakarsa/internal/model"
 	conversationrepository "nalakarsa/internal/repository/conversation"
+	notificationrepository "nalakarsa/internal/repository/notification"
 	userrepository "nalakarsa/internal/repository/user"
 	"nalakarsa/internal/utils"
 
@@ -34,13 +36,14 @@ type ConversationService interface {
 }
 
 type conversationService struct {
-	convRepo conversationrepository.ConversationRepository
-	userRepo userrepository.UserRepository
-	cfg      *config.Config
+	convRepo  conversationrepository.ConversationRepository
+	userRepo  userrepository.UserRepository
+	cfg       *config.Config
+	notifRepo notificationrepository.NotificationRepository
 }
 
-func NewConversationService(convRepo conversationrepository.ConversationRepository, userRepo userrepository.UserRepository, cfg *config.Config) ConversationService {
-	return &conversationService{convRepo: convRepo, userRepo: userRepo, cfg: cfg}
+func NewConversationService(convRepo conversationrepository.ConversationRepository, userRepo userrepository.UserRepository, notifRepo notificationrepository.NotificationRepository, cfg *config.Config) ConversationService {
+	return &conversationService{convRepo: convRepo, userRepo: userRepo, notifRepo: notifRepo, cfg: cfg}
 }
 
 func (s *conversationService) GetOrCreateDirect(userID uuid.UUID, req dto.CreateDirectConversationRequest) (*dto.ConversationResponse, error) {
@@ -167,16 +170,44 @@ func (s *conversationService) ListMessages(userID uuid.UUID, conversationID uuid
 	}
 
 	res := make([]dto.MessageResponse, len(messages))
+	conversation, err := s.convRepo.GetByID(conversationID)
+	if err != nil || conversation == nil {
+		return nil, false, errors.New("conversation not found")
+	}
+	readAtByUser := make(map[uuid.UUID]time.Time)
+	for _, conversationMember := range conversation.Members {
+		lastRead, readErr := s.convRepo.GetLastReadMessage(conversationID, conversationMember.UserID)
+		if readErr != nil {
+			return nil, false, readErr
+		}
+		if lastRead != nil {
+			readAtByUser[conversationMember.UserID] = lastRead.CreatedAt
+		}
+	}
 	for i, m := range messages {
 		sender := "them"
 		if m.SenderID == userID {
 			sender = "me"
 		}
+		isRead := false
+		if sender == "me" {
+			isRead = true
+			for _, conversationMember := range conversation.Members {
+				if conversationMember.UserID != userID {
+					readAt, exists := readAtByUser[conversationMember.UserID]
+					isRead = exists && !readAt.Before(m.CreatedAt)
+					if !isRead {
+						break
+					}
+				}
+			}
+		} else if readAt, exists := readAtByUser[userID]; exists {
+			isRead = !readAt.Before(m.CreatedAt)
+		}
 		res[i] = dto.MessageResponse{
-			ID:     m.ID,
-			Sender: sender,
-			Text:   m.Body,
-			Time:   m.CreatedAt,
+			ID: m.ID, Sender: sender, Text: m.Body, Time: m.CreatedAt,
+			TimeLabel: formatMessageTime(m.CreatedAt), IsRead: isRead,
+			Status: messageStatus(sender, isRead),
 		}
 		if m.AttachmentPath != "" {
 			res[i].Attachment = s.buildAttachmentResponse(m.AttachmentPath, m.AttachmentName, m.AttachmentMimeType, m.AttachmentSize, m.AttachmentType)
@@ -224,6 +255,7 @@ func (s *conversationService) SendMessage(userID uuid.UUID, conversationID uuid.
 		return nil, err
 	}
 	_ = s.convRepo.UpdateLastMessageAt(conversationID)
+	s.notifyConversationMembers(conversationID, userID, msg)
 
 	sender := "them"
 	if msg.SenderID == userID {
@@ -231,10 +263,8 @@ func (s *conversationService) SendMessage(userID uuid.UUID, conversationID uuid.
 	}
 
 	response := &dto.MessageResponse{
-		ID:     msg.ID,
-		Sender: sender,
-		Text:   msg.Body,
-		Time:   msg.CreatedAt,
+		ID: msg.ID, Sender: sender, Text: msg.Body, Time: msg.CreatedAt,
+		TimeLabel: formatMessageTime(msg.CreatedAt), Status: "sent", IsRead: false,
 	}
 	if msg.AttachmentPath != "" {
 		response.Attachment = s.buildAttachmentResponse(msg.AttachmentPath, msg.AttachmentName, msg.AttachmentMimeType, msg.AttachmentSize, msg.AttachmentType)
@@ -313,10 +343,13 @@ func (s *conversationService) buildConversationResponse(conv *model.Conversation
 		}
 	}
 	var lastMessageText string
+	var lastMessageTime *time.Time
 	messages, err := s.convRepo.ListMessages(conv.ID, 1, "")
 	if err == nil && len(messages) > 0 {
 		lastMessageText = messages[0].Body
+		lastMessageTime = &messages[0].CreatedAt
 	}
+	unreadCount, _ := s.convRepo.CountUnread(conv.ID, currentUserID)
 
 	return &dto.ConversationResponse{
 		ID:                 conv.ID,
@@ -326,7 +359,69 @@ func (s *conversationService) buildConversationResponse(conv *model.Conversation
 		LastMessage:        lastMessageText,
 		LastMessageText:    lastMessageText,
 		LastMessagePreview: lastMessageText,
+		LastMessageTime:    lastMessageTime,
+		UnreadCount:        unreadCount,
 	}, nil
+}
+
+func (s *conversationService) notifyConversationMembers(conversationID, senderID uuid.UUID, message *model.Message) {
+	if s.notifRepo == nil {
+		return
+	}
+	conversation, err := s.convRepo.GetByID(conversationID)
+	if err != nil || conversation == nil {
+		return
+	}
+	sender, _ := s.userRepo.GetByID(senderID)
+	senderName := "Pesan baru"
+	if sender != nil && sender.FullName != "" {
+		senderName = sender.FullName
+	}
+	payload, _ := json.Marshal(map[string]string{
+		"title":   "Pesan baru",
+		"message": fmt.Sprintf("%s mengirim pesan baru", senderName),
+		"preview": message.Body,
+	})
+	for _, member := range conversation.Members {
+		if member.UserID == senderID {
+			continue
+		}
+		recipientID := member.UserID
+		notification := &model.Notification{
+			UserID: recipientID, Type: constant.TypeMessage,
+			ActorID: &senderID, ResourceType: constant.ResourceConversation,
+			ResourceID: &conversationID, Payload: string(payload),
+		}
+		_ = s.notifRepo.Create(notification)
+		utils.PushToFirebaseRealtime(fmt.Sprintf("notifications/%s", recipientID), map[string]interface{}{
+			"type": constant.TypeMessage, "notification_id": notification.ID,
+			"conversation_id": conversationID, "message_id": message.ID,
+		}, s.cfg)
+	}
+}
+
+func messageStatus(sender string, isRead bool) string {
+	if sender == "me" && isRead {
+		return "read"
+	}
+	return "sent"
+}
+
+func formatMessageTime(value time.Time) string {
+	now := time.Now()
+	localValue := value.Local()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	messageDate := time.Date(localValue.Year(), localValue.Month(), localValue.Day(), 0, 0, 0, 0, now.Location())
+	if messageDate.Equal(today) {
+		return localValue.Format("15:04")
+	}
+	if messageDate.Equal(today.AddDate(0, 0, -1)) {
+		return "Kemarin " + localValue.Format("15:04")
+	}
+	if localValue.Year() == now.Year() {
+		return localValue.Format("02 Jan 15:04")
+	}
+	return localValue.Format("02 Jan 2006 15:04")
 }
 
 func (s *conversationService) ListGroupChats(userID uuid.UUID) ([]dto.GroupChatResponse, error) {
@@ -473,6 +568,7 @@ func (s *conversationService) SendGroupMessage(userID uuid.UUID, groupChatID uui
 	}
 
 	_ = s.convRepo.UpdateGroupChatLastMessage(gc.ID, content)
+	s.notifyGroupMembers(gc, userID, &msg)
 
 	response := &dto.GroupMessageResponse{
 		ID:              msg.ID,
@@ -492,6 +588,39 @@ func (s *conversationService) SendGroupMessage(userID uuid.UUID, groupChatID uui
 	utils.PushToFirebaseRealtime(firebasePath, response, s.cfg)
 
 	return response, nil
+}
+
+func (s *conversationService) notifyGroupMembers(groupChat *model.GroupChat, senderID uuid.UUID, message *model.GroupMessage) {
+	if s.notifRepo == nil || groupChat == nil {
+		return
+	}
+	senderName := "Pesan baru"
+	if message.Sender != nil && message.Sender.FullName != "" {
+		senderName = message.Sender.FullName
+	} else if sender, _ := s.userRepo.GetByID(senderID); sender != nil && sender.FullName != "" {
+		senderName = sender.FullName
+	}
+	payload, _ := json.Marshal(map[string]string{
+		"title":   "Pesan grup baru",
+		"message": fmt.Sprintf("%s mengirim pesan baru di %s", senderName, groupChat.Title),
+		"preview": message.Content,
+	})
+	for _, member := range groupChat.Members {
+		if member.UserID == senderID {
+			continue
+		}
+		recipientID := member.UserID
+		notification := &model.Notification{
+			UserID: recipientID, Type: constant.TypeMessage,
+			ActorID: &senderID, ResourceType: constant.ResourceGroupChat,
+			ResourceID: &groupChat.ID, Payload: string(payload),
+		}
+		_ = s.notifRepo.Create(notification)
+		utils.PushToFirebaseRealtime(fmt.Sprintf("notifications/%s", recipientID), map[string]interface{}{
+			"type": constant.TypeMessage, "notification_id": notification.ID,
+			"group_chat_id": groupChat.ID, "message_id": message.ID,
+		}, s.cfg)
+	}
 }
 
 func (s *conversationService) UploadGroupAttachment(userID uuid.UUID, groupChatID uuid.UUID, file *multipart.FileHeader) (*dto.AttachmentUploadResponse, error) {

@@ -315,6 +315,115 @@ paths:
         '200':
           description: Daftar profil berhasil diambil
 
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Lihat profil publik pengguna
+      description: Mengambil profil publik dan menambah hitungan kunjungan profil.
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Profil publik berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/UserProfileStatsResponse'
+                  message: { type: string }
+                  timestamp: { type: string, format: date-time }
+        '404':
+          description: Pengguna tidak ditemukan
+
+  /publications/feed:
+    get:
+      tags: [Publications]
+      summary: Ambil feed publication
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [for_you, following], default: for_you }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Cursor'
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 12 }
+      responses:
+        '200':
+          description: Feed publication berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationFeedResponse'
+
+  /publications/{publicationId}:
+    get:
+      tags: [Publications]
+      summary: Ambil detail publication
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: publicationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Detail publication berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PublicationResponse' }
+        '404':
+          description: Publication tidak ditemukan atau belum published
+
+  /publications/{publicationId}/save:
+    post:
+      tags: [Publications]
+      summary: Simpan publication
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: publicationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Publication berhasil disimpan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PublicationSaveResponse' }
+    delete:
+      tags: [Publications]
+      summary: Hapus publication dari simpanan
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: publicationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Publication berhasil di-unsave
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/PublicationSaveResponse' }
+
   /conversations:
     get:
       tags: [Conversations]
@@ -344,7 +453,13 @@ paths:
       summary: List direct messages
       security: [{ BearerAuth: [] }]
       parameters: [ { $ref: '#/components/parameters/ID' }, { $ref: '#/components/parameters/Limit' }, { $ref: '#/components/parameters/Cursor' } ]
-      responses: { '200': { description: Messages returned } }
+      responses:
+        '200':
+          description: Messages returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesResponse'
     post:
       tags: [Conversations]
       summary: Send direct message
@@ -413,6 +528,20 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SendMessageRequest' }
       responses: { '201': { description: Message sent } }
+  /chat/contacts/{id}/read:
+    patch:
+      tags: [Conversations]
+      summary: Tandai pesan chat sebagai sudah dibaca
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Messages marked as read } }
+  /chat/{id}/read:
+    patch:
+      tags: [Conversations]
+      summary: Alias tandai pesan sebagai sudah dibaca
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Messages marked as read } }
   /chat/contacts/{id}/attachments:
     post:
       tags: [Conversations]
@@ -1360,6 +1489,120 @@ components:
         total_pages: { type: integer, example: 2 }
         total_items: { type: integer, format: int64, example: 10 }
         limit: { type: integer, example: 10 }
+    UserProfileStatsResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string }
+        fullName: { type: string }
+        affiliation: { type: string }
+        location: { type: string }
+        expertise: { type: string }
+        bio: { type: string }
+        avatar_url: { type: string }
+        view_count: { type: integer, format: int64, example: 42 }
+        stats:
+          type: object
+          properties:
+            connection_count: { type: integer, format: int64 }
+            project_count: { type: integer, format: int64 }
+            discussion_count: { type: integer, format: int64 }
+            view_count: { type: integer, format: int64 }
+    ConversationResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string }
+        avatar: { type: string }
+        lastMessage: { type: string }
+        last_message: { type: string }
+        last_message_preview: { type: string }
+        last_message_time: { type: string, format: date-time, nullable: true }
+        unread_count: { type: integer, format: int64, example: 2 }
+    MessageResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sender: { type: string, enum: [me, them] }
+        text: { type: string }
+        time: { type: string, format: date-time }
+        time_label: { type: string, example: '14:35' }
+        status: { type: string, enum: [sent, read] }
+        is_read: { type: boolean }
+        attachment: { type: object, nullable: true }
+    MessagesResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            messages:
+              type: array
+              items: { $ref: '#/components/schemas/MessageResponse' }
+            has_more: { type: boolean }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+    NotificationResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, example: message }
+        actor_id: { type: string, format: uuid, nullable: true }
+        actor_name: { type: string }
+        resource_type: { type: string, example: conversation }
+        resource_id: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        message: { type: string }
+        read_at: { type: string, format: date-time, nullable: true }
+        is_read: { type: boolean }
+        created_at: { type: string, format: date-time }
+    PublicationCollaborator:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string }
+        affiliation: { type: string }
+        avatar_url: { type: string, nullable: true }
+    PublicationResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        publication_type: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        content: { type: string }
+        category: { type: string }
+        status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+        cover_url: { type: string }
+        view_count: { type: integer }
+        save_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        is_saved: { type: boolean }
+        collaborators:
+          type: array
+          items: { $ref: '#/components/schemas/PublicationCollaborator' }
+    PublicationFeedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PublicationResponse' }
+        meta:
+          type: object
+          properties:
+            next_cursor: { type: string, nullable: true }
+            has_more: { type: boolean }
+            limit: { type: integer }
+    PublicationSaveResponse:
+      type: object
+      properties:
+        publication_id: { type: string, format: uuid }
+        is_saved: { type: boolean }
+        save_count: { type: integer }
     SendMessageRequest:
       type: object
       properties:

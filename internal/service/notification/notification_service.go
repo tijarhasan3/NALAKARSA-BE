@@ -51,6 +51,7 @@ func (s *notificationService) ListNotifications(userID uuid.UUID, page, limit in
 			Message:      payload.Message,
 			Title:        payload.Title,
 			ReadAt:       n.ReadAt,
+			IsRead:       n.ReadAt != nil,
 			CreatedAt:    n.CreatedAt,
 		}
 	}

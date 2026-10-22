@@ -16,5 +16,6 @@ type NotificationResponse struct {
 	Message      string     `json:"message"`
 	Title        string     `json:"title,omitempty"`
 	ReadAt       *time.Time `json:"read_at"`
+	IsRead       bool       `json:"is_read"`
 	CreatedAt    time.Time  `json:"created_at"`
 }

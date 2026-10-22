@@ -1,6 +1,7 @@
 package dashboardservice
 
 import (
+	"encoding/json"
 	"time"
 
 	"nalakarsa/internal/dto"
@@ -151,6 +152,11 @@ func (s *dashboardService) toNotificationResponse(n model.Notification) dto.Noti
 	if n.Actor != nil {
 		actorName = n.Actor.FullName
 	}
+	var payload struct {
+		Title   string `json:"title"`
+		Message string `json:"message"`
+	}
+	_ = json.Unmarshal([]byte(n.Payload), &payload)
 
 	return dto.NotificationResponse{
 		ID:           n.ID,
@@ -159,7 +165,10 @@ func (s *dashboardService) toNotificationResponse(n model.Notification) dto.Noti
 		ActorName:    actorName,
 		ResourceType: n.ResourceType,
 		ResourceID:   n.ResourceID,
+		Title:        payload.Title,
+		Message:      payload.Message,
 		ReadAt:       n.ReadAt,
+		IsRead:       n.ReadAt != nil,
 		CreatedAt:    n.CreatedAt,
 	}
 }

@@ -22,6 +22,7 @@ type UserResponse struct {
 	Bio         string    `json:"bio"`
 	Industry    string    `json:"industry"`
 	AvatarURL   string    `json:"avatar_url"`
+	ViewCount   int64     `json:"view_count"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 type UserProfileStatsResponse struct {
@@ -33,6 +34,7 @@ type ProfileStats struct {
 	ConnectionCount int64 `json:"connection_count"`
 	ProjectCount    int64 `json:"project_count"`
 	DiscussionCount int64 `json:"discussion_count"`
+	ViewCount       int64 `json:"view_count"`
 }
 
 type MyProjectsResponse struct {

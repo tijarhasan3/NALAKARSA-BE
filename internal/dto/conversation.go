@@ -16,13 +16,15 @@ type StartChatRequest struct {
 }
 
 type ConversationResponse struct {
-	ID                 uuid.UUID `json:"id"`
-	Name               string    `json:"name"`
-	Role               string    `json:"role"`
-	Avatar             string    `json:"avatar"`
-	LastMessage        string    `json:"lastMessage"`
-	LastMessageText    string    `json:"last_message,omitempty"`
-	LastMessagePreview string    `json:"last_message_preview,omitempty"`
+	ID                 uuid.UUID  `json:"id"`
+	Name               string     `json:"name"`
+	Role               string     `json:"role"`
+	Avatar             string     `json:"avatar"`
+	LastMessage        string     `json:"lastMessage"`
+	LastMessageText    string     `json:"last_message,omitempty"`
+	LastMessagePreview string     `json:"last_message_preview,omitempty"`
+	LastMessageTime    *time.Time `json:"last_message_time,omitempty"`
+	UnreadCount        int64      `json:"unread_count"`
 }
 
 type SendMessageRequest struct {
@@ -49,6 +51,9 @@ type MessageResponse struct {
 	Sender     string              `json:"sender"`
 	Text       string              `json:"text"`
 	Time       time.Time           `json:"time"`
+	TimeLabel  string              `json:"time_label"`
+	Status     string              `json:"status"`
+	IsRead     bool                `json:"is_read"`
 	Attachment *AttachmentResponse `json:"attachment,omitempty"`
 }
 

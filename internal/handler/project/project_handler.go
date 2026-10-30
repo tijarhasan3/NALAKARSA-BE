@@ -336,7 +336,7 @@ func (h *ProjectHandler) submitCollabRequest(c *gin.Context, userID uuid.UUID, r
 // SubmitDiscussionCollabRequest keeps the FE discussion-oriented contract while
 // reusing the existing collaboration request service.
 func (h *ProjectHandler) SubmitDiscussionCollabRequest(c *gin.Context) {
-	discussionID, err := uuid.Parse(c.Param("discussionId"))
+	discussionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "Invalid discussion ID format")
 		return

@@ -202,16 +202,20 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 			('Aktivitas Rumah Tangga Sebagai Pemberi Kerja', true),
 			('Aktivitas Badan Internasional & Badan Ekstra Internasional', true)
 		ON CONFLICT (name) DO NOTHING`,
-		`INSERT INTO topics (name, slug, status) VALUES
-			('Pendidikan', 'pendidikan', 'approved'),
-			('Teknologi', 'teknologi', 'approved'),
-			('Kesehatan', 'kesehatan', 'approved'),
-			('Lingkungan', 'lingkungan', 'approved'),
-			('Pertanian', 'pertanian', 'approved'),
-			('Kebijakan Publik', 'kebijakan-publik', 'approved'),
-			('Ekonomi dan Bisnis', 'ekonomi-dan-bisnis', 'approved'),
-			('Sosial dan Masyarakat', 'sosial-dan-masyarakat', 'approved')
-		ON CONFLICT (name) DO NOTHING`,
+		`DO $$ BEGIN
+			IF to_regclass('public.topics') IS NOT NULL THEN
+				INSERT INTO topics (name, slug, status) VALUES
+					('Pendidikan', 'pendidikan', 'approved'),
+					('Teknologi', 'teknologi', 'approved'),
+					('Kesehatan', 'kesehatan', 'approved'),
+					('Lingkungan', 'lingkungan', 'approved'),
+					('Pertanian', 'pertanian', 'approved'),
+					('Kebijakan Publik', 'kebijakan-publik', 'approved'),
+					('Ekonomi dan Bisnis', 'ekonomi-dan-bisnis', 'approved'),
+					('Sosial dan Masyarakat', 'sosial-dan-masyarakat', 'approved')
+				ON CONFLICT (name) DO NOTHING;
+			END IF;
+		END $$`,
 		`DROP INDEX IF EXISTS idx_knowledge_field_name`,
 		`UPDATE knowledge_fields SET name = trim(regexp_replace(regexp_replace(name, '^[[:space:]]*[(]?[0-9]+[.)][[:space:]]*', ''), '[[:space:]]+[0-9]+$', '')) WHERE name ~ '^[[:space:]]*[(]?[0-9]+[.)]' OR name ~ '[[:space:]]+[0-9]+$'`,
 		`DELETE FROM knowledge_fields a USING knowledge_fields b WHERE a.id > b.id AND a.name = b.name`,

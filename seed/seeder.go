@@ -21,6 +21,7 @@ func SeedData(db *gorm.DB) error {
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.HomepageHero{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.HomepageTestimonial{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ProjectApplication{})
+	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.CollaborationRequest{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ProjectMilestone{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.ProjectMember{})
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&model.Project{})
@@ -207,6 +208,9 @@ func SeedData(db *gorm.DB) error {
 	if err := db.Create(app).Error; err != nil {
 		return err
 	}
+	if err := seedCollaborationRequests(db, akademisiUser, praktisiUser, profesionalUser, proj, disc1, disc2); err != nil {
+		return err
+	}
 	if err := db.Create(&model.Connection{
 		RequesterID: akademisiUser.ID,
 		AddresseeID: praktisiUser.ID,
@@ -261,6 +265,8 @@ func SeedData(db *gorm.DB) error {
 			Subtitle:  "Platform penghubung ekosistem riset dan industri.",
 			Content:   "Temukan kolaborasi lintas peran untuk mengubah ide riset menjadi implementasi nyata.",
 			ImageURL:  "/assets/homepage/benefits.jpg",
+			LinkLabel: "Pelajari Selengkapnya",
+			LinkURL:   "/about",
 			SortOrder: 1,
 			IsActive:  true,
 		},
@@ -270,7 +276,42 @@ func SeedData(db *gorm.DB) error {
 			Subtitle:  "Akses peluang yang relevan.",
 			Content:   "Lihat proyek, ikuti diskusi, dan bangun koneksi yang membantu kemajuan industri.",
 			ImageURL:  "/assets/homepage/highlights.jpg",
+			LinkLabel: "Lihat Proyek",
+			LinkURL:   "/projects",
 			SortOrder: 2,
+			IsActive:  true,
+		},
+		{
+			Key:       "research-network",
+			Title:     "Bangun Jaringan Riset",
+			Subtitle:  "Terhubung dengan orang yang tepat.",
+			Content:   "Temukan akademisi, praktisi, dan profesional berdasarkan keahlian serta kebutuhan kolaborasi.",
+			ImageURL:  "/assets/homepage/research-network.jpg",
+			LinkLabel: "Cari Kolaborator",
+			LinkURL:   "/users",
+			SortOrder: 3,
+			IsActive:  true,
+		},
+		{
+			Key:       "publication-feed",
+			Title:     "Bagikan Pengetahuan",
+			Subtitle:  "Publikasikan karya dan hasil riset.",
+			Content:   "Jadikan hasil penelitian lebih mudah ditemukan dan dikembangkan bersama oleh ekosistem inovasi.",
+			ImageURL:  "/assets/homepage/publication-feed.jpg",
+			LinkLabel: "Jelajahi Publikasi",
+			LinkURL:   "/publications",
+			SortOrder: 4,
+			IsActive:  true,
+		},
+		{
+			Key:       "impact",
+			Title:     "Dorong Dampak Nyata",
+			Subtitle:  "Dari ide menjadi solusi.",
+			Content:   "Kelola kolaborasi, diskusi, dan proyek dalam satu platform untuk mempercepat hilirisasi inovasi.",
+			ImageURL:  "/assets/homepage/impact.jpg",
+			LinkLabel: "Mulai Berkolaborasi",
+			LinkURL:   "/auth/register",
+			SortOrder: 5,
 			IsActive:  true,
 		},
 	}
@@ -294,6 +335,24 @@ func SeedData(db *gorm.DB) error {
 			IsActive:  true,
 			SortOrder: 2,
 		},
+		{
+			Name:      "Andi Pratama",
+			Role:      "Profesional",
+			Company:   "Teknologi Nusantara",
+			Message:   "Saya dapat menemukan proyek yang sesuai dengan keahlian dan ikut berkontribusi sejak tahap perencanaan.",
+			AvatarURL: "/assets/testimonials/andi.jpg",
+			IsActive:  true,
+			SortOrder: 3,
+		},
+		{
+			Name:      "Maya Lestari",
+			Role:      "Peneliti",
+			Company:   "Pusat Inovasi Indonesia",
+			Message:   "Nalakarsa membantu hasil riset kami menjangkau mitra industri yang tepat dan siap berkolaborasi.",
+			AvatarURL: "/assets/testimonials/maya.jpg",
+			IsActive:  true,
+			SortOrder: 4,
+		},
 	}
 
 	if err := db.Create(hero).Error; err != nil {
@@ -308,6 +367,27 @@ func SeedData(db *gorm.DB) error {
 
 	log.Println("Mock data seeding successfully completed.")
 	return nil
+}
+
+// seedCollaborationRequests creates representative records for the
+// collaboration-request endpoints, including requests from discussions and
+// projects in each supported status.
+func seedCollaborationRequests(db *gorm.DB, akademisi, praktisi, profesional *model.User, project *model.Project, disc1, disc2 *model.Discussion) error {
+	rejectionReason := "Kontribusi belum sesuai dengan kebutuhan proyek saat ini."
+	requests := []model.CollaborationRequest{
+		{DiscussionID: &disc1.ID, ApplicantID: akademisi.ID, ProposedContribution: "Menyusun rancangan arsitektur microservices dan dokumentasi teknis.", Status: constant.CollabStatusPending},
+		{DiscussionID: &disc1.ID, ApplicantID: praktisi.ID, ProposedContribution: "Menyediakan studi kasus implementasi backend di lingkungan produksi.", Status: constant.CollabStatusPending},
+		{DiscussionID: &disc1.ID, ApplicantID: profesional.ID, ProposedContribution: "Membantu review performa, observability, dan deployment layanan.", Status: constant.CollabStatusAccepted},
+		{DiscussionID: &disc2.ID, ApplicantID: praktisi.ID, ProposedContribution: "Membuka akses pilot project untuk validasi teknologi di lapangan.", Status: constant.CollabStatusPending},
+		{DiscussionID: &disc2.ID, ApplicantID: profesional.ID, ProposedContribution: "Membuat dashboard monitoring hasil hilirisasi riset.", Status: constant.CollabStatusRejected, RejectionReason: &rejectionReason},
+		{ProjectID: &project.ID, ApplicantID: akademisi.ID, ProposedContribution: "Menyediakan konsultasi metodologi penelitian dan validasi data.", Status: constant.CollabStatusPending},
+		{ProjectID: &project.ID, ApplicantID: praktisi.ID, ProposedContribution: "Menyiapkan lokasi uji dan pendampingan operasional lapangan.", Status: constant.CollabStatusAccepted},
+		{ProjectID: &project.ID, ApplicantID: profesional.ID, ProposedContribution: "Mengembangkan API integrasi sensor dan pipeline data.", Status: constant.CollabStatusPending},
+		{ProjectID: &project.ID, ApplicantID: akademisi.ID, ProposedContribution: "Membantu analisis hasil pengujian dan penyusunan laporan riset.", Status: constant.CollabStatusPending},
+		{ProjectID: &project.ID, ApplicantID: profesional.ID, ProposedContribution: "Menyusun rencana keamanan aplikasi dan deployment cloud.", Status: constant.CollabStatusPending},
+	}
+
+	return db.Create(&requests).Error
 }
 
 func seedPublications(db *gorm.DB, users ...*model.User) error {

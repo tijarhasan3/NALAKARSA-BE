@@ -11,6 +11,7 @@ func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *user
 	users.GET("", h.ListUsers)
 	users.GET("/search", h.ListUsers)
 	users.GET("/:id", h.GetPublicProfile)
+	users.GET("/:id/stats", h.GetUserStats)
 	users.GET("/:id/followers", h.GetFollowers)
 	users.GET("/:id/following", h.GetFollowing)
 

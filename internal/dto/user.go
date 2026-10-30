@@ -21,7 +21,9 @@ type UserResponse struct {
 	Expertise           string    `json:"expertise"`
 	Bio                 string    `json:"bio"`
 	Industry            string    `json:"industry"`
+	Mission             string    `json:"mission"`
 	AvatarURL           string    `json:"avatar_url"`
+	EmailVerified       bool      `json:"email_verified"`
 	ViewCount           int64     `json:"view_count"`
 	OnboardingStatus    string    `json:"onboarding_status"`
 	OnboardingCompleted bool      `json:"onboarding_completed"`
@@ -83,6 +85,7 @@ type UpdateProfileRequest struct {
 	Field       *string `json:"field"`
 	Industry    *string `json:"industry"`
 	Bio         *string `json:"bio" binding:"max=500"`
+	Mission     *string `json:"mission"`
 	AvatarURL   *string `json:"avatar_url"`
 }
 
@@ -97,6 +100,7 @@ type APIResponse struct {
 	Meta      *PaginationResponse `json:"meta,omitempty"`
 	Message   string              `json:"message"`
 	Timestamp string              `json:"timestamp,omitempty"`
+	RequestID string              `json:"request_id,omitempty"`
 }
 type APIErrorResponse struct {
 	Error APIErrorDetail `json:"error"`
@@ -107,4 +111,5 @@ type APIErrorDetail struct {
 	Message   string            `json:"message"`
 	Details   map[string]string `json:"details,omitempty"`
 	Timestamp string            `json:"timestamp,omitempty"`
+	RequestID string            `json:"request_id,omitempty"`
 }

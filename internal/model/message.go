@@ -11,6 +11,7 @@ type Message struct {
 	ID                 uuid.UUID      `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	ConversationID     uuid.UUID      `gorm:"type:uuid;index;not null"`
 	SenderID           uuid.UUID      `gorm:"type:uuid;index;not null"`
+	ClientMessageID    string         `gorm:"type:varchar(120);index"`
 	Body               string         `gorm:"type:text;not null"`
 	Status             string         `gorm:"type:varchar(20);default:'sent';not null"`
 	AttachmentPath     string         `gorm:"type:text"`

@@ -14,12 +14,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
+
 func JSONResponse(c *gin.Context, statusCode int, message string, data interface{}, pagination *dto.PaginationResponse) {
 	c.JSON(statusCode, dto.APIResponse{
 		Data:      data,
 		Meta:      pagination,
 		Message:   message,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		RequestID: requestID(c),
 	})
 }
 func ErrorJSONResponse(c *gin.Context, statusCode int, code string, message string, details map[string]string) {
@@ -29,6 +31,7 @@ func ErrorJSONResponse(c *gin.Context, statusCode int, code string, message stri
 			Message:   message,
 			Details:   details,
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
+			RequestID: requestID(c),
 		},
 	})
 }
@@ -42,7 +45,7 @@ func ErrorJSONResponseWithMessage(c *gin.Context, statusCode int, message string
 		details["reason"] = message
 		details["suggestion"] = "Verify query parameters, path variables, or request format"
 	case 401:
-		code = "UNAUTHORIZED"
+		code = "UNAUTHENTICATED"
 		details["reason"] = message
 		msgLower := strings.ToLower(message)
 		if strings.Contains(msgLower, "email") || strings.Contains(msgLower, "password") || strings.Contains(msgLower, "credential") {
@@ -82,7 +85,16 @@ func ValidationErrorResponse(c *gin.Context, input interface{}) {
 	case error:
 		details = FormatBindingError(v)
 	}
-	ErrorJSONResponse(c, 400, "VALIDATION_ERROR", "Validation failed", details)
+	ErrorJSONResponse(c, 422, "VALIDATION_ERROR", "Validation failed", details)
+}
+
+func requestID(c *gin.Context) string {
+	if value, exists := c.Get("request_id"); exists {
+		if id, ok := value.(string); ok {
+			return id
+		}
+	}
+	return c.GetHeader("X-Request-ID")
 }
 func FormatBindingError(err error) map[string]string {
 	details := make(map[string]string)

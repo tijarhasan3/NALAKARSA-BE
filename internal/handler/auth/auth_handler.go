@@ -48,6 +48,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		utils.ErrorJSONResponseWithMessage(c, http.StatusUnauthorized, err.Error())
 		return
 	}
+	if !res.User.EmailVerified {
+		utils.ErrorJSONResponse(c, http.StatusForbidden, "EMAIL_NOT_VERIFIED", "email not verified", map[string]string{"email": req.Email})
+		return
+	}
 
 	utils.JSONResponse(c, http.StatusOK, "Login successful", res, nil)
 }

@@ -60,6 +60,9 @@ paths:
                 bio:
                   type: string
                   example: Menghubungkan riset akademik ke industri nyata.
+                mission:
+                  type: string
+                  example: Mendorong riset menjadi solusi yang bermanfaat.
                 security_question:
                   type: string
                   enum: [favorite_animal, mother_name]
@@ -352,6 +355,16 @@ paths:
                   timestamp: { type: string, format: date-time }
         '404':
           description: Pengguna tidak ditemukan
+
+  /users/{id}/stats:
+    get:
+      tags: [Users]
+      summary: Statistik profile user
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ID'
+      responses:
+        '200': { description: Statistik user berhasil diambil }
 
   /profile:
     get:

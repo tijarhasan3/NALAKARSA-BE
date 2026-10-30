@@ -19,6 +19,7 @@ type ConversationRepository interface {
 	UpdateLastRead(conversationID, userID, messageID uuid.UUID) error
 	GetLastReadMessage(conversationID, userID uuid.UUID) (*model.Message, error)
 	CreateMessage(msg *model.Message) error
+	GetMessageByClientID(conversationID, userID uuid.UUID, clientMessageID string) (*model.Message, error)
 	GetMessageByID(id uuid.UUID) (*model.Message, error)
 	DeleteMessage(id uuid.UUID) error
 	ListMessages(conversationID uuid.UUID, limit int, cursor string) ([]model.Message, error)
@@ -30,6 +31,7 @@ type ConversationRepository interface {
 	IsGroupChatMember(groupChatID, userID uuid.UUID) (bool, error)
 	ListGroupMessages(groupChatID uuid.UUID, page, limit int) ([]model.GroupMessage, int64, error)
 	CreateGroupMessage(msg *model.GroupMessage) error
+	GetGroupMessageByClientID(groupChatID, userID uuid.UUID, clientMessageID string) (*model.GroupMessage, error)
 	GetGroupMessageByID(id uuid.UUID) (*model.GroupMessage, error)
 	DeleteGroupMessage(id uuid.UUID) error
 	UpdateGroupChatLastMessage(groupChatID uuid.UUID, lastMessage string) error
@@ -141,6 +143,15 @@ func (r *pgConversationRepository) GetLastReadMessage(conversationID, userID uui
 
 func (r *pgConversationRepository) CreateMessage(msg *model.Message) error {
 	return r.db.Create(msg).Error
+}
+
+func (r *pgConversationRepository) GetMessageByClientID(conversationID, userID uuid.UUID, clientMessageID string) (*model.Message, error) {
+	var msg model.Message
+	err := r.db.Where("conversation_id = ? AND sender_id = ? AND client_message_id = ?", conversationID, userID, clientMessageID).First(&msg).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &msg, err
 }
 
 func (r *pgConversationRepository) ListMessages(conversationID uuid.UUID, limit int, cursor string) ([]model.Message, error) {
@@ -273,6 +284,15 @@ func (r *pgConversationRepository) ListGroupMessages(groupChatID uuid.UUID, page
 
 func (r *pgConversationRepository) CreateGroupMessage(msg *model.GroupMessage) error {
 	return r.db.Create(msg).Error
+}
+
+func (r *pgConversationRepository) GetGroupMessageByClientID(groupChatID, userID uuid.UUID, clientMessageID string) (*model.GroupMessage, error) {
+	var msg model.GroupMessage
+	err := r.db.Where("group_chat_id = ? AND sender_id = ? AND client_message_id = ?", groupChatID, userID, clientMessageID).First(&msg).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &msg, err
 }
 
 func (r *pgConversationRepository) UpdateGroupChatLastMessage(groupChatID uuid.UUID, lastMessage string) error {

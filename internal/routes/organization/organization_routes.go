@@ -9,4 +9,6 @@ import (
 func RegisterRoutes(public *gin.RouterGroup, handler *organizationhandler.OrganizationHandler) {
 	public.GET("/organizations/search", handler.Search)
 	public.POST("/organizations", handler.Create)
+	public.GET("/companies/search", handler.Search)
+	public.POST("/companies", handler.Create)
 }

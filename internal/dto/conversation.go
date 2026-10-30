@@ -28,6 +28,7 @@ type ConversationResponse struct {
 }
 
 type SendMessageRequest struct {
+	ClientMessageID    string `json:"client_message_id"`
 	Text               string `json:"text" binding:"max=5000"`
 	Body               string `json:"body"`
 	AttachmentPath     string `json:"attachment_path"`
@@ -47,14 +48,18 @@ type AttachmentUploadResponse struct {
 }
 
 type MessageResponse struct {
-	ID         uuid.UUID           `json:"id"`
-	Sender     string              `json:"sender"`
-	Text       string              `json:"text"`
-	Time       time.Time           `json:"time"`
-	TimeLabel  string              `json:"time_label"`
-	Status     string              `json:"status"`
-	IsRead     bool                `json:"is_read"`
-	Attachment *AttachmentResponse `json:"attachment,omitempty"`
+	ID              uuid.UUID           `json:"id"`
+	ConversationID  uuid.UUID           `json:"conversation_id,omitempty"`
+	SenderID        *uuid.UUID          `json:"sender_id,omitempty"`
+	ClientMessageID string              `json:"client_message_id,omitempty"`
+	Sender          string              `json:"sender"`
+	Text            string              `json:"text"`
+	Time            time.Time           `json:"time"`
+	TimeLabel       string              `json:"time_label"`
+	Status          string              `json:"status"`
+	IsRead          bool                `json:"is_read"`
+	ReadAt          *time.Time          `json:"read_at,omitempty"`
+	Attachment      *AttachmentResponse `json:"attachment,omitempty"`
 }
 
 type AttachmentResponse struct {
@@ -91,6 +96,7 @@ type GroupChatResponse struct {
 }
 
 type SendGroupMessageRequest struct {
+	ClientMessageID    string `json:"client_message_id"`
 	Text               string `json:"text"`
 	Content            string `json:"content"`
 	AttachmentPath     string `json:"attachment_path"`
@@ -102,6 +108,7 @@ type SendGroupMessageRequest struct {
 
 type GroupMessageResponse struct {
 	ID              uuid.UUID           `json:"id"`
+	ClientMessageID string              `json:"client_message_id,omitempty"`
 	GroupChatID     uuid.UUID           `json:"groupChatId"`
 	SenderID        *uuid.UUID          `json:"senderId,omitempty"`
 	SenderName      string              `json:"senderName,omitempty"`

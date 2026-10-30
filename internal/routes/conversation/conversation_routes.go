@@ -9,6 +9,7 @@ import (
 func RegisterRoutes(protected *gin.RouterGroup, h *conversationhandler.ConversationHandler) {
 	protected.GET("/conversations", h.ListConversations)
 	protected.POST("/conversations/direct", h.GetOrCreateDirect)
+	protected.POST("/conversations", h.GetOrCreateDirect)
 	protected.GET("/conversations/:id/messages", h.ListMessages)
 	protected.POST("/conversations/:id/messages", h.SendMessage)
 	protected.POST("/conversations/:id/attachments", h.UploadAttachment)

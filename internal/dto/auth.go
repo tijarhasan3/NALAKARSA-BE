@@ -3,8 +3,8 @@ package dto
 type RegisterRequest struct {
 	Email            string  `json:"email" binding:"required,email"`
 	Password         string  `json:"password" binding:"required,min=6,max=72"`
-	SecurityQuestion string  `json:"security_question" binding:"required,oneof=favorite_animal mother_name"`
-	SecurityAnswer   string  `json:"security_answer" binding:"required,min=2,max=100"`
+	SecurityQuestion string  `json:"security_question"`
+	SecurityAnswer   string  `json:"security_answer"`
 	Role             string  `json:"role" binding:"required"`
 	FirstName        string  `json:"firstName" binding:"required"`
 	MiddleName       *string `json:"middleName"`
@@ -16,6 +16,7 @@ type RegisterRequest struct {
 	Location         string  `json:"location" binding:"required"`
 	Expertise        string  `json:"expertise" binding:"required"`
 	Industry         string  `json:"industry"`
+	Mission          string  `json:"mission"`
 	Bio              string  `json:"bio" binding:"max=500"`
 	AvatarURL        string  `json:"avatar_url"`
 }

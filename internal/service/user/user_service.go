@@ -27,6 +27,7 @@ type UserService interface {
 	ListUsers(search, role string, page, limit int) ([]dto.UserResponse, int64, error)
 	GetMyProjects(userID uuid.UUID) (*dto.MyProjectsResponse, error)
 	GetMyStats(userID uuid.UUID) (*dto.UserStatsResponse, error)
+	GetUserStats(userID uuid.UUID) (*dto.UserStatsResponse, error)
 	ToggleFollow(currentUserID, targetUserID uuid.UUID) (*dto.ToggleFollowResponse, error)
 	GetFollowers(currentUserID *uuid.UUID, targetUserID uuid.UUID, page, limit int) ([]dto.FollowUserItemResponse, int64, error)
 	GetFollowing(currentUserID *uuid.UUID, targetUserID uuid.UUID, page, limit int) ([]dto.FollowUserItemResponse, int64, error)
@@ -131,9 +132,10 @@ func (s *userService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileReque
 	location := updateValue(req.Location, existingUser.Location)
 	expertise := updateValue(expertiseInput, existingUser.Expertise)
 	industry := updateValue(req.Industry, existingUser.Industry)
+	mission := updateValue(req.Mission, existingUser.Mission)
 	bio := updateValue(req.Bio, existingUser.Bio)
 	avatarURL := updateValue(req.AvatarURL, existingUser.AvatarURL)
-	values := []*string{req.FirstName, req.MiddleName, req.LastName, req.FullName, req.PrefixTitle, req.SuffixTitle, affiliationInput, req.Location, expertiseInput, req.Industry, req.Bio}
+	values := []*string{req.FirstName, req.MiddleName, req.LastName, req.FullName, req.PrefixTitle, req.SuffixTitle, affiliationInput, req.Location, expertiseInput, req.Industry, req.Mission, req.Bio}
 	for _, value := range values {
 		if value != nil {
 			if err := contentfilter.Validate(*value); err != nil {
@@ -154,6 +156,7 @@ func (s *userService) UpdateProfile(userID uuid.UUID, req dto.UpdateProfileReque
 		Location:    location,
 		Expertise:   expertise,
 		Industry:    industry,
+		Mission:     mission,
 		Bio:         bio,
 		AvatarURL:   avatarURL,
 	}
@@ -220,6 +223,14 @@ func (s *userService) GetMyProjects(userID uuid.UUID) (*dto.MyProjectsResponse, 
 }
 
 func (s *userService) GetMyStats(userID uuid.UUID) (*dto.UserStatsResponse, error) {
+	return s.getStats(userID)
+}
+
+func (s *userService) GetUserStats(userID uuid.UUID) (*dto.UserStatsResponse, error) {
+	return s.getStats(userID)
+}
+
+func (s *userService) getStats(userID uuid.UUID) (*dto.UserStatsResponse, error) {
 	u, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -387,6 +398,8 @@ func toUserResponse(u *model.User) *dto.UserResponse {
 		Industry:            u.Industry,
 		Bio:                 u.Bio,
 		AvatarURL:           u.AvatarURL,
+		Mission:             u.Mission,
+		EmailVerified:       u.EmailVerifiedAt != nil,
 		ViewCount:           int64(u.ViewCount),
 		OnboardingStatus:    onboardingStatus,
 		OnboardingCompleted: onboardingStatus == "completed",

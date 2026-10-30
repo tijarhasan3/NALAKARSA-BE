@@ -217,6 +217,20 @@ func (h *UserHandler) GetMyStats(c *gin.Context) {
 	utils.JSONResponse(c, http.StatusOK, "My stats retrieved successfully", stats, nil)
 }
 
+func (h *UserHandler) GetUserStats(c *gin.Context) {
+	targetUser, err := h.userService.ResolveUser(c.Param("id"))
+	if err != nil || targetUser == nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusNotFound, "User not found")
+		return
+	}
+	stats, err := h.userService.GetUserStats(targetUser.ID)
+	if err != nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "User stats retrieved successfully", stats, nil)
+}
+
 func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, constant.MaxAvatarRequestSize)
 	var userID uuid.UUID

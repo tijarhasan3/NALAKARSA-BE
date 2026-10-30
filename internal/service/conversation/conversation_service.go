@@ -225,6 +225,15 @@ func (s *conversationService) SendMessage(userID uuid.UUID, conversationID uuid.
 	if member == nil {
 		return nil, errors.New("not a member of this conversation")
 	}
+	if clientID := strings.TrimSpace(req.ClientMessageID); clientID != "" {
+		existing, lookupErr := s.convRepo.GetMessageByClientID(conversationID, userID, clientID)
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+		if existing != nil {
+			return &dto.MessageResponse{ID: existing.ID, ConversationID: existing.ConversationID, SenderID: &existing.SenderID, ClientMessageID: existing.ClientMessageID, Sender: "me", Text: existing.Body, Time: existing.CreatedAt, TimeLabel: formatMessageTime(existing.CreatedAt), Status: "sent", IsRead: true}, nil
+		}
+	}
 
 	text := req.Text
 	if text == "" {
@@ -242,6 +251,7 @@ func (s *conversationService) SendMessage(userID uuid.UUID, conversationID uuid.
 	msg := &model.Message{
 		ConversationID:     conversationID,
 		SenderID:           userID,
+		ClientMessageID:    strings.TrimSpace(req.ClientMessageID),
 		Body:               text,
 		Status:             "sent",
 		AttachmentPath:     req.AttachmentPath,
@@ -263,7 +273,7 @@ func (s *conversationService) SendMessage(userID uuid.UUID, conversationID uuid.
 	}
 
 	response := &dto.MessageResponse{
-		ID: msg.ID, Sender: sender, Text: msg.Body, Time: msg.CreatedAt,
+		ID: msg.ID, ConversationID: msg.ConversationID, SenderID: &msg.SenderID, ClientMessageID: msg.ClientMessageID, Sender: sender, Text: msg.Body, Time: msg.CreatedAt,
 		TimeLabel: formatMessageTime(msg.CreatedAt), Status: "sent", IsRead: false,
 	}
 	if msg.AttachmentPath != "" {
@@ -539,6 +549,15 @@ func (s *conversationService) SendGroupMessage(userID uuid.UUID, groupChatID uui
 	if !isMember {
 		return nil, errors.New("unauthorized to send messages to this group chat")
 	}
+	if clientID := strings.TrimSpace(req.ClientMessageID); clientID != "" {
+		existing, lookupErr := s.convRepo.GetGroupMessageByClientID(gc.ID, userID, clientID)
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+		if existing != nil {
+			return &dto.GroupMessageResponse{ID: existing.ID, ClientMessageID: existing.ClientMessageID, GroupChatID: existing.GroupChatID, SenderID: existing.SenderID, Content: existing.Content, CreatedAt: existing.CreatedAt}, nil
+		}
+	}
 	if req.AttachmentPath != "" {
 		prefix := fmt.Sprintf("conversations/%s/pending/", gc.ID)
 		if !strings.HasPrefix(req.AttachmentPath, prefix) {
@@ -554,6 +573,7 @@ func (s *conversationService) SendGroupMessage(userID uuid.UUID, groupChatID uui
 	msg := model.GroupMessage{
 		GroupChatID:        gc.ID,
 		SenderID:           &userID,
+		ClientMessageID:    strings.TrimSpace(req.ClientMessageID),
 		IsSystemMessage:    false,
 		Content:            content,
 		AttachmentPath:     req.AttachmentPath,
@@ -572,6 +592,7 @@ func (s *conversationService) SendGroupMessage(userID uuid.UUID, groupChatID uui
 
 	response := &dto.GroupMessageResponse{
 		ID:              msg.ID,
+		ClientMessageID: msg.ClientMessageID,
 		GroupChatID:     msg.GroupChatID,
 		SenderID:        msg.SenderID,
 		SenderName:      sender.FullName,

@@ -9,8 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
 func NewRouter(cfg *config.Config) *gin.Engine {
 	r := gin.New()
+	r.Use(middleware.RequestID())
 	r.Use(middleware.LoggerMiddleware(cfg))
 	r.Use(gin.Recovery())
 	r.Use(middleware.CORSMiddleware(cfg))

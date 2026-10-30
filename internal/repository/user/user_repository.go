@@ -131,7 +131,7 @@ func (r *pgUserRepository) UpdateProfile(u *model.User) error {
 		"first_name": u.FirstName, "middle_name": u.MiddleName, "last_name": u.LastName,
 		"full_name": u.FullName, "prefix_title": u.PrefixTitle, "suffix_title": u.SuffixTitle,
 		"affiliation": u.Affiliation, "location": u.Location, "expertise": u.Expertise,
-		"industry": u.Industry, "bio": u.Bio, "avatar_url": u.AvatarURL,
+		"industry": u.Industry, "mission": u.Mission, "bio": u.Bio, "avatar_url": u.AvatarURL,
 	}
 	if u.PasswordHash != "" {
 		updates["password_hash"] = u.PasswordHash

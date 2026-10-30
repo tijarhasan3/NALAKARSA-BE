@@ -155,6 +155,18 @@ func getFirebaseAccessToken() (string, error) {
 	return res.AccessToken, nil
 }
 func PushToFirebaseRealtime(path string, payload interface{}, cfg *config.Config) {
+	writeToFirebaseRealtime(http.MethodPost, path, payload, cfg)
+}
+
+func SetToFirebaseRealtime(path string, payload interface{}, cfg *config.Config) {
+	writeToFirebaseRealtime(http.MethodPut, path, payload, cfg)
+}
+
+func DeleteFromFirebaseRealtime(path string, cfg *config.Config) {
+	writeToFirebaseRealtime(http.MethodDelete, path, nil, cfg)
+}
+
+func writeToFirebaseRealtime(method, path string, payload interface{}, cfg *config.Config) {
 	go func() {
 		saOnce.Do(loadServiceAccount)
 
@@ -177,19 +189,25 @@ func PushToFirebaseRealtime(path string, payload interface{}, cfg *config.Config
 			url = fmt.Sprintf("%s?auth=%s", url, cfg.FirebaseDatabaseSecret)
 		}
 
-		jsonData, err := json.Marshal(payload)
-		if err != nil {
-			log.Printf("[FIREBASE RTDB] Failed to marshal payload for %s: %v", cleanPath, err)
-			return
+		var body io.Reader
+		if method != http.MethodDelete {
+			jsonData, err := json.Marshal(payload)
+			if err != nil {
+				log.Printf("[FIREBASE RTDB] Failed to marshal payload for %s: %v", cleanPath, err)
+				return
+			}
+			body = bytes.NewBuffer(jsonData)
 		}
 
 		client := &http.Client{Timeout: 5 * time.Second}
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(method, url, body)
 		if err != nil {
 			log.Printf("[FIREBASE RTDB] Failed to create request for %s: %v", cleanPath, err)
 			return
 		}
-		req.Header.Set("Content-Type", "application/json")
+		if method != http.MethodDelete {
+			req.Header.Set("Content-Type", "application/json")
+		}
 		accessToken, tokenErr := getFirebaseAccessToken()
 		if tokenErr == nil && accessToken != "" && (cfg == nil || cfg.FirebaseDatabaseSecret == "") {
 			req.Header.Set("Authorization", "Bearer "+accessToken)
@@ -203,7 +221,7 @@ func PushToFirebaseRealtime(path string, payload interface{}, cfg *config.Config
 		defer resp.Body.Close()
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			log.Printf("[FIREBASE RTDB] Successfully broadcasted message to path: %s", cleanPath)
+			log.Printf("[FIREBASE RTDB] Successfully wrote %s at path: %s", method, cleanPath)
 		} else {
 			respBody, _ := io.ReadAll(resp.Body)
 			log.Printf("[FIREBASE RTDB] Non-2xx response from Firebase (%d) on %s: %s", resp.StatusCode, cleanPath, string(respBody))

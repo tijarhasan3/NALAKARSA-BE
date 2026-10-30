@@ -104,6 +104,8 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		log.Println("Running database migrations...")
 		err = db.AutoMigrate(
 			&model.User{},
+			&model.Topic{},
+			&model.UserTopic{},
 			&model.UserFollower{},
 			&model.Institution{},
 			&model.Organization{},
@@ -199,6 +201,16 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 			('Aktivitas Jasa Lainnya', true),
 			('Aktivitas Rumah Tangga Sebagai Pemberi Kerja', true),
 			('Aktivitas Badan Internasional & Badan Ekstra Internasional', true)
+		ON CONFLICT (name) DO NOTHING`,
+		`INSERT INTO topics (name, slug, status) VALUES
+			('Pendidikan', 'pendidikan', 'approved'),
+			('Teknologi', 'teknologi', 'approved'),
+			('Kesehatan', 'kesehatan', 'approved'),
+			('Lingkungan', 'lingkungan', 'approved'),
+			('Pertanian', 'pertanian', 'approved'),
+			('Kebijakan Publik', 'kebijakan-publik', 'approved'),
+			('Ekonomi dan Bisnis', 'ekonomi-dan-bisnis', 'approved'),
+			('Sosial dan Masyarakat', 'sosial-dan-masyarakat', 'approved')
 		ON CONFLICT (name) DO NOTHING`,
 		`DROP INDEX IF EXISTS idx_knowledge_field_name`,
 		`UPDATE knowledge_fields SET name = trim(regexp_replace(regexp_replace(name, '^[[:space:]]*[(]?[0-9]+[.)][[:space:]]*', ''), '[[:space:]]+[0-9]+$', '')) WHERE name ~ '^[[:space:]]*[(]?[0-9]+[.)]' OR name ~ '[[:space:]]+[0-9]+$'`,

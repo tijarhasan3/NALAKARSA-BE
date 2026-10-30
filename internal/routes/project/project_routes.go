@@ -23,8 +23,11 @@ func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *proj
 	protected.POST("/projects/:id/milestones", h.CreateMilestone)
 	protected.PATCH("/projects/:id/milestones/:milestoneId", h.UpdateMilestone)
 	protected.POST("/collaborations/requests", h.SubmitCollabRequest)
+	protected.POST("/discussions/:discussionId/collaboration-requests", h.SubmitDiscussionCollabRequest)
 	protected.GET("/collaborations/requests", h.ListCollabRequests)
 	protected.PATCH("/collaborations/requests/:id/approve", h.ApproveCollabRequest)
 	protected.PATCH("/collaborations/requests/:id/reject", h.RejectCollabRequest)
+	protected.POST("/collaboration-requests/:id/approve", h.ApproveCollabRequest)
+	protected.POST("/collaboration-requests/:id/reject", h.RejectCollabRequest)
 	protected.DELETE("/collaborations/requests/:id", h.WithdrawCollabRequest)
 }

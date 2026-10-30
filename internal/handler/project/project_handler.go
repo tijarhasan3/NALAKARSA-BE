@@ -314,6 +314,10 @@ func (h *ProjectHandler) SubmitCollabRequest(c *gin.Context) {
 		return
 	}
 
+	h.submitCollabRequest(c, userID, req)
+}
+
+func (h *ProjectHandler) submitCollabRequest(c *gin.Context, userID uuid.UUID, req dto.SubmitCollaborationRequest) {
 	res, err := h.projService.SubmitCollabRequest(userID, req)
 	if err != nil {
 		statusCode := http.StatusBadRequest
@@ -327,6 +331,28 @@ func (h *ProjectHandler) SubmitCollabRequest(c *gin.Context) {
 	}
 
 	utils.JSONResponse(c, http.StatusCreated, "Collaboration request submitted successfully", res, nil)
+}
+
+// SubmitDiscussionCollabRequest keeps the FE discussion-oriented contract while
+// reusing the existing collaboration request service.
+func (h *ProjectHandler) SubmitDiscussionCollabRequest(c *gin.Context) {
+	discussionID, err := uuid.Parse(c.Param("discussionId"))
+	if err != nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "Invalid discussion ID format")
+		return
+	}
+	var req dto.SubmitCollaborationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, err)
+		return
+	}
+	req.DiscussionID = &discussionID
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	h.submitCollabRequest(c, userID.(uuid.UUID), req)
 }
 
 func (h *ProjectHandler) ListCollabRequests(c *gin.Context) {

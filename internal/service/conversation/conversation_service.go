@@ -269,8 +269,8 @@ func (s *conversationService) SendMessage(userID uuid.UUID, conversationID uuid.
 	if msg.AttachmentPath != "" {
 		response.Attachment = s.buildAttachmentResponse(msg.AttachmentPath, msg.AttachmentName, msg.AttachmentMimeType, msg.AttachmentSize, msg.AttachmentType)
 	}
-	firebasePath := fmt.Sprintf("chats/direct/%s/messages", conversationID.String())
-	utils.PushToFirebaseRealtime(firebasePath, response, s.cfg)
+	firebasePath := fmt.Sprintf("chats/direct/%s/messages/%s", conversationID.String(), msg.ID.String())
+	utils.SetToFirebaseRealtime(firebasePath, response, s.cfg)
 
 	return response, nil
 }
@@ -584,8 +584,8 @@ func (s *conversationService) SendGroupMessage(userID uuid.UUID, groupChatID uui
 	if msg.AttachmentPath != "" {
 		response.Attachment = s.buildAttachmentResponse(msg.AttachmentPath, msg.AttachmentName, msg.AttachmentMimeType, msg.AttachmentSize, msg.AttachmentType)
 	}
-	firebasePath := fmt.Sprintf("chats/groups/%s/messages", gc.ID.String())
-	utils.PushToFirebaseRealtime(firebasePath, response, s.cfg)
+	firebasePath := fmt.Sprintf("chats/groups/%s/messages/%s", gc.ID.String(), msg.ID.String())
+	utils.SetToFirebaseRealtime(firebasePath, response, s.cfg)
 
 	return response, nil
 }
@@ -660,12 +660,8 @@ func (s *conversationService) DeleteMessage(userID uuid.UUID, messageID uuid.UUI
 		if err := s.convRepo.DeleteMessage(msg.ID); err != nil {
 			return err
 		}
-		firebasePath := fmt.Sprintf("chats/direct/%s/messages", msg.ConversationID.String())
-		utils.PushToFirebaseRealtime(firebasePath, map[string]interface{}{
-			"event":      "message_deleted",
-			"message_id": msg.ID.String(),
-			"deleted_at": time.Now().UTC().Format(time.RFC3339),
-		}, s.cfg)
+		firebasePath := fmt.Sprintf("chats/direct/%s/messages/%s", msg.ConversationID.String(), msg.ID.String())
+		utils.DeleteFromFirebaseRealtime(firebasePath, s.cfg)
 
 		return nil
 	}
@@ -678,12 +674,8 @@ func (s *conversationService) DeleteMessage(userID uuid.UUID, messageID uuid.UUI
 		if err := s.convRepo.DeleteGroupMessage(gmsg.ID); err != nil {
 			return err
 		}
-		firebasePath := fmt.Sprintf("chats/groups/%s/messages", gmsg.GroupChatID.String())
-		utils.PushToFirebaseRealtime(firebasePath, map[string]interface{}{
-			"event":      "message_deleted",
-			"message_id": gmsg.ID.String(),
-			"deleted_at": time.Now().UTC().Format(time.RFC3339),
-		}, s.cfg)
+		firebasePath := fmt.Sprintf("chats/groups/%s/messages/%s", gmsg.GroupChatID.String(), gmsg.ID.String())
+		utils.DeleteFromFirebaseRealtime(firebasePath, s.cfg)
 
 		return nil
 	}

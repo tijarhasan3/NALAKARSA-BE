@@ -30,6 +30,108 @@ type supabaseDeleteRequest struct {
 	Paths    []string `json:"paths,omitempty"`
 }
 
+func UploadAssetToSupabase(userID uuid.UUID, category string, fileHeader *multipart.FileHeader, cfg *config.Config) (string, string, error) {
+	if cfg.SupabaseURL == "" || cfg.SupabaseServiceRoleKey == "" || cfg.SupabaseAssetBucket == "" {
+		return "", "", errors.New("supabase asset storage is not configured")
+	}
+	category = strings.Trim(strings.TrimSpace(category), "/")
+	if category == "" {
+		category = "general"
+	}
+	if strings.Contains(category, "..") || strings.ContainsAny(category, `\\`) {
+		return "", "", errors.New("invalid asset category")
+	}
+	if cfg.SupabaseAssetMaxFileSize > 0 && fileHeader.Size > cfg.SupabaseAssetMaxFileSize {
+		return "", "", errors.New("asset file size exceeds the maximum limit")
+	}
+	contentType := fileHeader.Header.Get("Content-Type")
+	if !isAllowedAssetType(contentType) {
+		return "", "", errors.New("unsupported asset file type")
+	}
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", "", err
+	}
+	defer file.Close()
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	objectPath := fmt.Sprintf("users/%s/%s/%s%s", userID, category, uuid.New(), ext)
+	uploadURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", strings.TrimRight(cfg.SupabaseURL, "/"), cfg.SupabaseAssetBucket, objectPath)
+	req, err := http.NewRequest(http.MethodPost, uploadURL, file)
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+cfg.SupabaseServiceRoleKey)
+	req.Header.Set("apikey", cfg.SupabaseServiceRoleKey)
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("x-upsert", "false")
+	req.ContentLength = fileHeader.Size
+	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to upload asset: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		return "", "", fmt.Errorf("supabase asset upload error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
+	}
+	signedURL, err := CreateSignedURL(objectPath, cfg.SupabaseAssetBucket, cfg)
+	if err != nil {
+		return objectPath, "", err
+	}
+	return objectPath, signedURL, nil
+}
+
+func CreateSignedURL(path, bucket string, cfg *config.Config) (string, error) {
+	if cfg.SupabaseURL == "" || cfg.SupabaseServiceRoleKey == "" || bucket == "" {
+		return "", errors.New("supabase signed URL storage is not configured")
+	}
+	payload, err := json.Marshal(map[string]interface{}{"expiresIn": 3600, "paths": []string{path}})
+	if err != nil {
+		return "", err
+	}
+	endpoint := fmt.Sprintf("%s/storage/v1/object/sign/%s", strings.TrimRight(cfg.SupabaseURL, "/"), bucket)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+cfg.SupabaseServiceRoleKey)
+	req.Header.Set("apikey", cfg.SupabaseServiceRoleKey)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		return "", fmt.Errorf("supabase signed URL error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
+	}
+	var result struct {
+		SignedURLs []struct {
+			SignedURL string `json:"signedURL"`
+		} `json:"signedURLs"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
+	}
+	if len(result.SignedURLs) == 0 || result.SignedURLs[0].SignedURL == "" {
+		return "", errors.New("signed URL was not returned")
+	}
+	return result.SignedURLs[0].SignedURL, nil
+}
+
+func isAllowedAssetType(contentType string) bool {
+	allowed := map[string]bool{
+		"image/jpeg": true, "image/jpg": true, "image/png": true, "image/webp": true,
+		"application/pdf": true, "application/msword": true,
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   true,
+		"application/vnd.ms-powerpoint":                                             true,
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation": true,
+		"text/plain": true,
+	}
+	return allowed[strings.ToLower(strings.TrimSpace(contentType))]
+}
+
 func CreateChatSignedURL(path string, cfg *config.Config) (string, error) {
 	if cfg.SupabaseURL == "" || cfg.SupabaseServiceRoleKey == "" || cfg.SupabaseChatBucket == "" {
 		return "", errors.New("supabase chat storage is not configured")

@@ -11,6 +11,7 @@ func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *disc
 	discussions.GET("", h.List)
 	discussions.GET("/:id", h.GetByID)
 	discussions.GET("/:id/replies", h.GetReplies)
+	discussions.GET("/:id/collaboration", h.GetByID)
 
 	protected.POST("/discussions", h.Create)
 	protected.PATCH("/discussions/:id", h.Update)
@@ -20,4 +21,6 @@ func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *disc
 	protected.DELETE("/discussions/:id/replies/:reply_id", h.DeleteReply)
 	protected.POST("/discussions/:id/votes", h.Vote)
 	protected.DELETE("/discussions/:id/votes", h.Unvote)
+	protected.POST("/discussions/:id/upvote", h.Vote)
+	protected.DELETE("/discussions/:id/upvote", h.Unvote)
 }

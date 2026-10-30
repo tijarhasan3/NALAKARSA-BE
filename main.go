@@ -7,6 +7,7 @@ import (
 
 	"nalakarsa/internal/config"
 	"nalakarsa/internal/database"
+	assethandler "nalakarsa/internal/handler/asset"
 	authhandler "nalakarsa/internal/handler/auth"
 	connectionhandler "nalakarsa/internal/handler/connection"
 	conversationhandler "nalakarsa/internal/handler/conversation"
@@ -23,6 +24,7 @@ import (
 	projecthandler "nalakarsa/internal/handler/project"
 	publicationhandler "nalakarsa/internal/handler/publication"
 	skillhandler "nalakarsa/internal/handler/skill"
+	topichandler "nalakarsa/internal/handler/topic"
 	userhandler "nalakarsa/internal/handler/user"
 	"nalakarsa/internal/middleware"
 	connectionrepository "nalakarsa/internal/repository/connection"
@@ -39,6 +41,7 @@ import (
 	projectrepository "nalakarsa/internal/repository/project"
 	publicationrepository "nalakarsa/internal/repository/publication"
 	skillrepository "nalakarsa/internal/repository/skill"
+	topicrepository "nalakarsa/internal/repository/topic"
 	userrepository "nalakarsa/internal/repository/user"
 	authservice "nalakarsa/internal/service/auth"
 	connectionservice "nalakarsa/internal/service/connection"
@@ -56,10 +59,12 @@ import (
 	projectservice "nalakarsa/internal/service/project"
 	publicationservice "nalakarsa/internal/service/publication"
 	skillservice "nalakarsa/internal/service/skill"
+	topicservice "nalakarsa/internal/service/topic"
 	userservice "nalakarsa/internal/service/user"
 	"nalakarsa/internal/utils"
 
 	"nalakarsa/internal/routes"
+	assetroutes "nalakarsa/internal/routes/asset"
 	authroutes "nalakarsa/internal/routes/auth"
 	connectionroutes "nalakarsa/internal/routes/connection"
 	conversationroutes "nalakarsa/internal/routes/conversation"
@@ -76,6 +81,7 @@ import (
 	projectroutes "nalakarsa/internal/routes/project"
 	publicationroutes "nalakarsa/internal/routes/publication"
 	skillroutes "nalakarsa/internal/routes/skill"
+	topicroutes "nalakarsa/internal/routes/topic"
 	userroutes "nalakarsa/internal/routes/user"
 	"nalakarsa/seed"
 
@@ -115,6 +121,7 @@ func main() {
 	connRepo := connectionrepository.NewConnectionRepository(db)
 	projRepo := projectrepository.NewProjectRepository(db)
 	publicationRepo := publicationrepository.NewPublicationRepository(db)
+	topicRepo := topicrepository.NewTopicRepository(db)
 	convRepo := conversationrepository.NewConversationRepository(db)
 	notifRepo := notificationrepository.NewNotificationRepository(db)
 	homeRepo := homerepository.NewHomepageRepository(db)
@@ -131,6 +138,7 @@ func main() {
 	connService := connectionservice.NewConnectionService(connRepo, userRepo)
 	projService := projectservice.NewProjectService(projRepo, userRepo, discRepo, notifRepo)
 	publicationService := publicationservice.NewPublicationService(publicationRepo)
+	topicService := topicservice.NewTopicService(topicRepo)
 	convService := conversationservice.NewConversationService(convRepo, userRepo, notifRepo, cfg)
 	notifService := notificationservice.NewNotificationService(notifRepo)
 	dashService := dashboardservice.NewDashboardService(projRepo, connRepo, convRepo, notifRepo)
@@ -141,6 +149,7 @@ func main() {
 	industryService := industryservice.NewIndustryService(industryRepo)
 	knowledgeService := knowledgeservice.NewKnowledgeService(knowledgeRepo)
 	authHandler := authhandler.NewAuthHandler(authService)
+	assetHandler := assethandler.NewAssetHandler(cfg)
 	userHandler := userhandler.NewUserHandler(userService, cfg)
 	discHandler := discussionhandler.NewDiscussionHandler(discService)
 	expertiseHandler := expertisehandler.NewExpertiseHandler(expertiseService)
@@ -148,6 +157,7 @@ func main() {
 	connHandler := connectionhandler.NewConnectionHandler(connService)
 	projHandler := projecthandler.NewProjectHandler(projService)
 	publicationHandler := publicationhandler.NewPublicationHandler(publicationService)
+	topicHandler := topichandler.NewTopicHandler(topicService)
 	convHandler := conversationhandler.NewConversationHandler(convService)
 	notifHandler := notificationhandler.NewNotificationHandler(notifService)
 	dashHandler := dashboardhandler.NewDashboardHandler(dashService)
@@ -163,6 +173,7 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(cfg))
 
 	authroutes.RegisterRoutes(v1, protected, authHandler)
+	assetroutes.RegisterRoutes(protected, assetHandler)
 	userroutes.RegisterRoutes(v1, protected, userHandler, connHandler.GetSuggestions)
 	discussionroutes.RegisterRoutes(v1, protected, discHandler)
 	expertiseroutes.RegisterRoutes(v1, expertiseHandler)
@@ -170,6 +181,7 @@ func main() {
 	connectionroutes.RegisterRoutes(protected, connHandler)
 	projectroutes.RegisterRoutes(v1, protected, projHandler)
 	publicationroutes.RegisterRoutes(protected, publicationHandler)
+	topicroutes.RegisterRoutes(v1, protected, topicHandler)
 	institutionroutes.RegisterRoutes(v1, institutionHandler)
 	organizationroutes.RegisterRoutes(v1, organizationHandler)
 	locationroutes.RegisterRoutes(v1, locationHandler)

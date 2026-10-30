@@ -139,6 +139,22 @@ paths:
         '401':
           description: Refresh token tidak valid atau kadaluwarsa
 
+  /auth/resend-verification:
+    post:
+      tags: [Auth]
+      summary: Alias kirim ulang verifikasi email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200': { description: Email verifikasi berhasil dikirim }
+
   /auth/forgot-password:
     post:
       tags: [Auth]
@@ -356,6 +372,60 @@ paths:
       responses:
         '200': { description: Profile berhasil diperbarui }
 
+  /profile/interests:
+    get:
+      tags: [Users]
+      summary: Ambil topik minat user
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Topik minat berhasil diambil }
+    patch:
+      tags: [Users]
+      summary: Perbarui topik minat user
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topic_ids]
+              properties:
+                topic_ids:
+                  type: array
+                  minItems: 3
+                  items: { type: string, format: uuid }
+      responses:
+        '200': { description: Topik minat berhasil diperbarui }
+
+  /topics:
+    get:
+      tags: [Topics]
+      summary: Daftar topik resmi
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Daftar topik berhasil diambil }
+
+  /topics/suggestions:
+    post:
+      tags: [Topics]
+      summary: Usulkan topik baru
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+      responses:
+        '201': { description: Usulan topik tersimpan dengan status pending }
+
   /publications/feed:
     get:
       tags: [Publications]
@@ -382,6 +452,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublicationFeedResponse'
+
+  /assets:
+    post:
+      tags: [Assets]
+      summary: Upload asset ke Supabase Storage
+      description: Menyimpan asset pada path users/{userID}/{category}/{uuid}.ext dan mengembalikan signed URL.
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                category: { type: string, example: discussions }
+      responses:
+        '201': { description: Asset berhasil diupload }
+        '400': { description: File tidak valid atau melebihi batas ukuran }
 
   /publications/{publicationId}:
     get:
@@ -1275,6 +1365,66 @@ paths:
         '200':
           description: Diskusi berhasil dihapus
 
+  /discussions/{id}/upvote:
+    post:
+      tags: [Discussions]
+      summary: Upvote diskusi
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Upvote berhasil disimpan }
+    delete:
+      tags: [Discussions]
+      summary: Hapus upvote diskusi
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Upvote berhasil dihapus }
+
+  /discussions/{id}/collaboration:
+    get:
+      tags: [Discussions]
+      summary: Ambil detail diskusi dan status kolaborasi
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Status kolaborasi diskusi berhasil diambil }
+
+  /discussions/{discussionId}/collaboration-requests:
+    post:
+      tags: [Collaborations]
+      summary: Ajukan kolaborasi dari diskusi
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: discussionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [proposedContribution]
+              properties:
+                role_id: { type: string }
+                role_note: { type: string }
+                proposedContribution: { type: string }
+      responses:
+        '201': { description: Collaboration request berhasil dibuat }
+
   /discussions/{id}/comments:
     post:
       tags: [Discussions]
@@ -1496,6 +1646,14 @@ components:
       in: query
       schema: { type: string }
   schemas:
+    TopicResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
+        created_at: { type: string, format: date-time }
     SkillResponse:
       type: object
       properties:

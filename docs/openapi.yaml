@@ -337,6 +337,25 @@ paths:
         '404':
           description: Pengguna tidak ditemukan
 
+  /profile:
+    get:
+      tags: [Users]
+      summary: Alias profile pengguna saat ini
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Profile berhasil diambil }
+    patch:
+      tags: [Users]
+      summary: Alias update profile pengguna saat ini
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: Profile berhasil diperbarui }
+
   /publications/feed:
     get:
       tags: [Publications]
@@ -405,6 +424,23 @@ paths:
                 type: object
                 properties:
                   data: { $ref: '#/components/schemas/PublicationSaveResponse' }
+
+  /collaborations/from-discussion:
+    post:
+      tags: [Projects]
+      summary: Membuat project collaboration dari discussion
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [discussionId]
+              properties:
+                discussionId: { type: string, format: uuid }
+      responses:
+        '201': { description: Collaboration project berhasil dibuat }
     delete:
       tags: [Publications]
       summary: Hapus publication dari simpanan
@@ -666,6 +702,17 @@ paths:
       summary: List notifications
       security: [{ BearerAuth: [] }]
       responses: { '200': { description: Notifications returned } }
+    delete:
+      tags: [Notifications]
+      summary: Hapus semua notification milik user
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Notifications deleted } }
+  /notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Ambil jumlah notification yang belum dibaca
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: Unread notification count returned } }
   /notifications/{id}/read:
     patch:
       tags: [Notifications]
@@ -673,6 +720,19 @@ paths:
       security: [{ BearerAuth: [] }]
       parameters: [ { $ref: '#/components/parameters/ID' } ]
       responses: { '200': { description: Notification updated } }
+    post:
+      tags: [Notifications]
+      summary: Alias mark notification as read
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Notification updated } }
+  /notifications/{id}:
+    delete:
+      tags: [Notifications]
+      summary: Hapus satu notification
+      security: [{ BearerAuth: [] }]
+      parameters: [ { $ref: '#/components/parameters/ID' } ]
+      responses: { '200': { description: Notification deleted } }
   /notifications/read-all:
     patch:
       tags: [Notifications]
@@ -1126,6 +1186,11 @@ paths:
                 content:
                   type: string
                   example: Rekan-rekan, pastikan menggunakan preload secara bijak agar terhindar dari N+1 query...
+                background: { type: string }
+                objective: { type: string }
+                expected_output: { type: string }
+                media_url: { type: string }
+                topic_id: { type: string, format: uuid }
                 category:
                   type: string
                   example: Tech
@@ -1151,7 +1216,7 @@ paths:
       responses:
         '200':
           description: Detail diskusi berhasil dimuat
-    put:
+    patch:
       tags: [Discussions]
       summary: Update Topik Diskusi
       description: Memperbarui topik diskusi pribadi (Hanya untuk pemilik topik).
@@ -1179,6 +1244,11 @@ paths:
                   type: string
                 content:
                   type: string
+                background: { type: string }
+                objective: { type: string }
+                expected_output: { type: string }
+                media_url: { type: string }
+                topic_id: { type: string, format: uuid }
                 category:
                   type: string
                 tags:

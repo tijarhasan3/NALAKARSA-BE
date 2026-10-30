@@ -13,6 +13,9 @@ type NotificationService interface {
 	ListNotifications(userID uuid.UUID, page, limit int) ([]dto.NotificationResponse, int64, error)
 	MarkRead(userID uuid.UUID, notifID uuid.UUID) error
 	MarkAllRead(userID uuid.UUID) error
+	CountUnread(userID uuid.UUID) (int64, error)
+	Delete(userID, notifID uuid.UUID) error
+	DeleteAll(userID uuid.UUID) error
 }
 
 type notificationService struct {
@@ -65,4 +68,16 @@ func (s *notificationService) MarkRead(userID uuid.UUID, notifID uuid.UUID) erro
 
 func (s *notificationService) MarkAllRead(userID uuid.UUID) error {
 	return s.notifRepo.MarkAllRead(userID)
+}
+
+func (s *notificationService) CountUnread(userID uuid.UUID) (int64, error) {
+	return s.notifRepo.CountUnread(userID)
+}
+
+func (s *notificationService) Delete(userID, notifID uuid.UUID) error {
+	return s.notifRepo.Delete(userID, notifID)
+}
+
+func (s *notificationService) DeleteAll(userID uuid.UUID) error {
+	return s.notifRepo.DeleteAll(userID)
 }

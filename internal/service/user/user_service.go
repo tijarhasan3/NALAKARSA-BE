@@ -366,24 +366,30 @@ func toUserResponse(u *model.User) *dto.UserResponse {
 	if u.MiddleName != nil {
 		middleName = *u.MiddleName
 	}
+	onboardingStatus := "email_verification_pending"
+	if u.EmailVerifiedAt != nil {
+		onboardingStatus = "completed"
+	}
 	return &dto.UserResponse{
-		ID:          u.ID,
-		Email:       u.Email,
-		Role:        u.Role,
-		CreatedAt:   u.CreatedAt,
-		FirstName:   u.FirstName,
-		MiddleName:  &middleName,
-		LastName:    u.LastName,
-		FullName:    u.FullName,
-		PrefixTitle: u.PrefixTitle,
-		SuffixTitle: u.SuffixTitle,
-		Affiliation: u.Affiliation,
-		Location:    u.Location,
-		Expertise:   u.Expertise,
-		Industry:    u.Industry,
-		Bio:         u.Bio,
-		AvatarURL:   u.AvatarURL,
-		ViewCount:   int64(u.ViewCount),
+		ID:                  u.ID,
+		Email:               u.Email,
+		Role:                u.Role,
+		CreatedAt:           u.CreatedAt,
+		FirstName:           u.FirstName,
+		MiddleName:          &middleName,
+		LastName:            u.LastName,
+		FullName:            u.FullName,
+		PrefixTitle:         u.PrefixTitle,
+		SuffixTitle:         u.SuffixTitle,
+		Affiliation:         u.Affiliation,
+		Location:            u.Location,
+		Expertise:           u.Expertise,
+		Industry:            u.Industry,
+		Bio:                 u.Bio,
+		AvatarURL:           u.AvatarURL,
+		ViewCount:           int64(u.ViewCount),
+		OnboardingStatus:    onboardingStatus,
+		OnboardingCompleted: onboardingStatus == "completed",
 	}
 }
 

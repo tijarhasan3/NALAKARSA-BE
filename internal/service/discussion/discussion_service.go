@@ -37,12 +37,17 @@ func NewDiscussionService(discRepo discussionrepository.DiscussionRepository, us
 
 func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionRequest) (uuid.UUID, error) {
 	disc := &model.Discussion{
-		UserID:      userID,
-		Title:       req.Title,
-		Description: req.GetDescription(),
-		Category:    req.Category,
-		Tags:        req.Tags,
-		Status:      "open",
+		UserID:         userID,
+		Title:          req.Title,
+		Description:    req.GetDescription(),
+		Background:     req.Background,
+		Objective:      req.Objective,
+		ExpectedOutput: req.ExpectedOutput,
+		MediaURL:       req.MediaURL,
+		TopicID:        req.TopicID,
+		Category:       req.Category,
+		Tags:           req.Tags,
+		Status:         "open",
 	}
 
 	if err := s.discRepo.Create(disc); err != nil {
@@ -70,26 +75,33 @@ func (s *discussionService) GetByID(id uuid.UUID, currentUserID *uuid.UUID) (*dt
 	}
 
 	return &dto.DiscussionDetailResponse{
-		ID:                 disc.ID,
-		Title:              disc.Title,
-		Description:        disc.Description,
-		Excerpt:            disc.Description,
-		Category:           disc.Category,
-		Tags:               disc.Tags,
-		Status:             disc.Status,
-		IsInCollaboration:  disc.IsInCollaboration,
-		Replies:            replyCount,
-		UpvoteCount:        upvoteCount,
-		HasUpvoted:         hasUpvoted,
-		Time:               disc.CreatedAt,
-		CreatedAt:          disc.CreatedAt,
-		AuthorID:           disc.User.ID,
-		Author:             formatAuthorName(disc.User.PrefixTitle, disc.User.FullName, disc.User.SuffixTitle),
-		PrefixTitle:        disc.User.PrefixTitle,
-		SuffixTitle:        disc.User.SuffixTitle,
-		Role:               disc.User.Role,
-		AvatarURL:          disc.User.AvatarURL,
-		SourceDiscussionID: disc.SourceDiscussionID,
+		ID:                     disc.ID,
+		Title:                  disc.Title,
+		Description:            disc.Description,
+		Background:             disc.Background,
+		Objective:              disc.Objective,
+		ExpectedOutput:         disc.ExpectedOutput,
+		MediaURL:               disc.MediaURL,
+		TopicID:                disc.TopicID,
+		Excerpt:                disc.Description,
+		Category:               disc.Category,
+		Tags:                   disc.Tags,
+		Status:                 disc.Status,
+		IsInCollaboration:      disc.IsInCollaboration,
+		HasActiveCollaboration: disc.IsInCollaboration,
+		Replies:                replyCount,
+		UpvoteCount:            upvoteCount,
+		HasUpvoted:             hasUpvoted,
+		Time:                   disc.CreatedAt,
+		CreatedAt:              disc.CreatedAt,
+		UpdatedAt:              disc.UpdatedAt,
+		AuthorID:               disc.User.ID,
+		Author:                 formatAuthorName(disc.User.PrefixTitle, disc.User.FullName, disc.User.SuffixTitle),
+		PrefixTitle:            disc.User.PrefixTitle,
+		SuffixTitle:            disc.User.SuffixTitle,
+		Role:                   disc.User.Role,
+		AvatarURL:              disc.User.AvatarURL,
+		SourceDiscussionID:     disc.SourceDiscussionID,
 		Creator: dto.DiscussionCreator{
 			ID:          disc.User.ID,
 			FullName:    formatAuthorName(disc.User.PrefixTitle, disc.User.FullName, disc.User.SuffixTitle),
@@ -156,24 +168,30 @@ func (s *discussionService) List(search, category, role, sort string, page, limi
 		}
 
 		res[i] = dto.DiscussionResponse{
-			ID:                 d.ID,
-			Title:              d.Title,
-			Description:        d.Description,
-			Category:           d.Category,
-			Tags:               d.Tags,
-			Status:             d.Status,
-			IsInCollaboration:  d.IsInCollaboration,
-			Replies:            replyCount,
-			UpvoteCount:        upvoteCount,
-			HasUpvoted:         hasUpvoted,
-			Time:               d.CreatedAt,
-			AuthorID:           d.User.ID,
-			Author:             formatAuthorName(d.User.PrefixTitle, d.User.FullName, d.User.SuffixTitle),
-			PrefixTitle:        d.User.PrefixTitle,
-			SuffixTitle:        d.User.SuffixTitle,
-			Role:               d.User.Role,
-			AvatarURL:          d.User.AvatarURL,
-			SourceDiscussionID: d.SourceDiscussionID,
+			ID:                     d.ID,
+			Title:                  d.Title,
+			Description:            d.Description,
+			Background:             d.Background,
+			Objective:              d.Objective,
+			ExpectedOutput:         d.ExpectedOutput,
+			MediaURL:               d.MediaURL,
+			TopicID:                d.TopicID,
+			Category:               d.Category,
+			Tags:                   d.Tags,
+			Status:                 d.Status,
+			IsInCollaboration:      d.IsInCollaboration,
+			HasActiveCollaboration: d.IsInCollaboration,
+			Replies:                replyCount,
+			UpvoteCount:            upvoteCount,
+			HasUpvoted:             hasUpvoted,
+			Time:                   d.CreatedAt,
+			AuthorID:               d.User.ID,
+			Author:                 formatAuthorName(d.User.PrefixTitle, d.User.FullName, d.User.SuffixTitle),
+			PrefixTitle:            d.User.PrefixTitle,
+			SuffixTitle:            d.User.SuffixTitle,
+			Role:                   d.User.Role,
+			AvatarURL:              d.User.AvatarURL,
+			SourceDiscussionID:     d.SourceDiscussionID,
 		}
 	}
 
@@ -196,6 +214,11 @@ func (s *discussionService) Update(userID uuid.UUID, id uuid.UUID, req dto.Updat
 	if desc := req.GetDescription(); desc != "" {
 		disc.Description = desc
 	}
+	disc.Background = req.Background
+	disc.Objective = req.Objective
+	disc.ExpectedOutput = req.ExpectedOutput
+	disc.MediaURL = req.MediaURL
+	disc.TopicID = req.TopicID
 	disc.Category = req.Category
 	disc.Tags = req.Tags
 	if req.Status != "" {

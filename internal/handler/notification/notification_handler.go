@@ -69,3 +69,36 @@ func (h *NotificationHandler) MarkAllRead(c *gin.Context) {
 
 	utils.JSONResponse(c, http.StatusOK, "All notifications marked as read", nil, nil)
 }
+
+func (h *NotificationHandler) UnreadCount(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+	count, err := h.notifService.CountUnread(userID)
+	if err != nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "Unread notification count retrieved successfully", gin.H{"unread_count": count}, nil)
+}
+
+func (h *NotificationHandler) Delete(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+	notifID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "Invalid notification ID format")
+		return
+	}
+	if err := h.notifService.Delete(userID, notifID); err != nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "Notification deleted successfully", nil, nil)
+}
+
+func (h *NotificationHandler) DeleteAll(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+	if err := h.notifService.DeleteAll(userID); err != nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	utils.JSONResponse(c, http.StatusOK, "Notifications deleted successfully", nil, nil)
+}

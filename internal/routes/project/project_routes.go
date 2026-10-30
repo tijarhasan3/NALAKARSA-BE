@@ -14,6 +14,7 @@ func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *proj
 	public.GET("/collaborations", h.List)
 
 	protected.POST("/projects", h.Create)
+	protected.POST("/collaborations/from-discussion", h.CreateFromDiscussion)
 	protected.PATCH("/projects/:id", h.Update)
 	protected.DELETE("/projects/:id", h.Delete)
 	protected.POST("/projects/:id/applications", h.Apply)

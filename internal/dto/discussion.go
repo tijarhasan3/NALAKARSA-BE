@@ -7,32 +7,48 @@ import (
 )
 
 type CreateDiscussionRequest struct {
-	Title       string `json:"title" binding:"required,min=1"`
-	Description string `json:"description"`
-	Excerpt     string `json:"excerpt"`
-	Category    string `json:"category" binding:"required"`
-	Tags        string `json:"tags"`
+	Title          string     `json:"title" binding:"required,min=1"`
+	Description    string     `json:"description"`
+	Excerpt        string     `json:"excerpt"`
+	Background     string     `json:"background"`
+	Objective      string     `json:"objective"`
+	ExpectedOutput string     `json:"expected_output"`
+	MediaURL       string     `json:"media_url"`
+	TopicID        *uuid.UUID `json:"topic_id"`
+	Category       string     `json:"category" binding:"required"`
+	Tags           string     `json:"tags"`
 }
 
 func (r *CreateDiscussionRequest) GetDescription() string {
 	if r.Description != "" {
 		return r.Description
 	}
+	if r.Background != "" {
+		return r.Background
+	}
 	return r.Excerpt
 }
 
 type UpdateDiscussionRequest struct {
-	Title       string `json:"title" binding:"required,min=1"`
-	Description string `json:"description"`
-	Excerpt     string `json:"excerpt"`
-	Category    string `json:"category" binding:"required"`
-	Tags        string `json:"tags"`
-	Status      string `json:"status" binding:"omitempty,oneof=open resolved closed"`
+	Title          string     `json:"title" binding:"required,min=1"`
+	Description    string     `json:"description"`
+	Excerpt        string     `json:"excerpt"`
+	Background     string     `json:"background"`
+	Objective      string     `json:"objective"`
+	ExpectedOutput string     `json:"expected_output"`
+	MediaURL       string     `json:"media_url"`
+	TopicID        *uuid.UUID `json:"topic_id"`
+	Category       string     `json:"category" binding:"required"`
+	Tags           string     `json:"tags"`
+	Status         string     `json:"status" binding:"omitempty,oneof=open resolved closed"`
 }
 
 func (r *UpdateDiscussionRequest) GetDescription() string {
 	if r.Description != "" {
 		return r.Description
+	}
+	if r.Background != "" {
+		return r.Background
 	}
 	return r.Excerpt
 }
@@ -62,51 +78,67 @@ type DiscussionRepliesData struct {
 }
 
 type DiscussionResponse struct {
-	ID                 uuid.UUID  `json:"id"`
-	Title              string     `json:"title"`
-	Description        string     `json:"description"`
-	Excerpt            string     `json:"excerpt,omitempty"`
-	Category           string     `json:"category"`
-	Tags               string     `json:"tags"`
-	Status             string     `json:"status"`
-	IsInCollaboration  bool       `json:"isInCollaboration"`
-	Replies            int64      `json:"replies"`
-	UpvoteCount        int64      `json:"upvote_count"`
-	HasUpvoted         bool       `json:"has_upvoted"`
-	Time               time.Time  `json:"time"`
-	CreatedAt          time.Time  `json:"createdAt"`
-	AuthorID           uuid.UUID  `json:"author_id"`
-	Author             string     `json:"author"`
-	PrefixTitle        string     `json:"prefixTitle"`
-	SuffixTitle        string     `json:"suffixTitle"`
-	Role               string     `json:"role"`
-	AvatarURL          string     `json:"avatar_url"`
-	SourceDiscussionID *uuid.UUID `json:"sourceDiscussionId"`
+	ID                     uuid.UUID  `json:"id"`
+	Title                  string     `json:"title"`
+	Description            string     `json:"description"`
+	Background             string     `json:"background"`
+	Objective              string     `json:"objective"`
+	ExpectedOutput         string     `json:"expected_output"`
+	MediaURL               string     `json:"media_url"`
+	TopicID                *uuid.UUID `json:"topic_id"`
+	Excerpt                string     `json:"excerpt,omitempty"`
+	Category               string     `json:"category"`
+	Tags                   string     `json:"tags"`
+	Status                 string     `json:"status"`
+	IsInCollaboration      bool       `json:"isInCollaboration"`
+	HasActiveCollaboration bool       `json:"has_active_collaboration"`
+	CollaborationID        *uuid.UUID `json:"collaboration_id,omitempty"`
+	Replies                int64      `json:"replies"`
+	UpvoteCount            int64      `json:"upvote_count"`
+	HasUpvoted             bool       `json:"has_upvoted"`
+	Time                   time.Time  `json:"time"`
+	CreatedAt              time.Time  `json:"createdAt"`
+	UpdatedAt              time.Time  `json:"updated_at"`
+	AuthorID               uuid.UUID  `json:"author_id"`
+	Author                 string     `json:"author"`
+	PrefixTitle            string     `json:"prefixTitle"`
+	SuffixTitle            string     `json:"suffixTitle"`
+	Role                   string     `json:"role"`
+	AvatarURL              string     `json:"avatar_url"`
+	SourceDiscussionID     *uuid.UUID `json:"sourceDiscussionId"`
 }
 
 type DiscussionDetailResponse struct {
-	ID                 uuid.UUID                 `json:"id"`
-	Title              string                    `json:"title"`
-	Description        string                    `json:"description"`
-	Excerpt            string                    `json:"excerpt,omitempty"`
-	Category           string                    `json:"category"`
-	Tags               string                    `json:"tags"`
-	Status             string                    `json:"status"`
-	IsInCollaboration  bool                      `json:"isInCollaboration"`
-	Replies            int64                     `json:"replies"`
-	UpvoteCount        int64                     `json:"upvote_count"`
-	HasUpvoted         bool                      `json:"has_upvoted"`
-	Time               time.Time                 `json:"time"`
-	CreatedAt          time.Time                 `json:"createdAt"`
-	AuthorID           uuid.UUID                 `json:"author_id"`
-	Author             string                    `json:"author"`
-	PrefixTitle        string                    `json:"prefixTitle"`
-	SuffixTitle        string                    `json:"suffixTitle"`
-	Role               string                    `json:"role"`
-	AvatarURL          string                    `json:"avatar_url"`
-	SourceDiscussionID *uuid.UUID                `json:"sourceDiscussionId"`
-	Creator            DiscussionCreator         `json:"creator"`
-	RepliesList        []DiscussionReplyResponse `json:"repliesList"`
+	ID                     uuid.UUID                 `json:"id"`
+	Title                  string                    `json:"title"`
+	Description            string                    `json:"description"`
+	Background             string                    `json:"background"`
+	Objective              string                    `json:"objective"`
+	ExpectedOutput         string                    `json:"expected_output"`
+	MediaURL               string                    `json:"media_url"`
+	TopicID                *uuid.UUID                `json:"topic_id"`
+	Excerpt                string                    `json:"excerpt,omitempty"`
+	Category               string                    `json:"category"`
+	Tags                   string                    `json:"tags"`
+	Status                 string                    `json:"status"`
+	IsInCollaboration      bool                      `json:"isInCollaboration"`
+	HasActiveCollaboration bool                      `json:"has_active_collaboration"`
+	CollaborationID        *uuid.UUID                `json:"collaboration_id,omitempty"`
+	Replies                int64                     `json:"replies"`
+	UpvoteCount            int64                     `json:"upvote_count"`
+	HasUpvoted             bool                      `json:"has_upvoted"`
+	Time                   time.Time                 `json:"time"`
+	CreatedAt              time.Time                 `json:"createdAt"`
+	UpdatedAt              time.Time                 `json:"updated_at"`
+	AuthorID               uuid.UUID                 `json:"author_id"`
+	Author                 string                    `json:"author"`
+	PrefixTitle            string                    `json:"prefixTitle"`
+	SuffixTitle            string                    `json:"suffixTitle"`
+	Role                   string                    `json:"role"`
+	AvatarURL              string                    `json:"avatar_url"`
+	SourceDiscussionID     *uuid.UUID                `json:"sourceDiscussionId"`
+	Creator                DiscussionCreator         `json:"creator"`
+	RepliesList            []DiscussionReplyResponse `json:"repliesList"`
 }
 
 type CreateReplyRequest struct {

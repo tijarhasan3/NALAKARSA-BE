@@ -45,6 +45,10 @@ func (h *ProjectHandler) CreateFromDiscussion(c *gin.Context) {
 		utils.ValidationErrorResponse(c, err)
 		return
 	}
+	if req.DiscussionID == uuid.Nil {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "discussion ID is required")
+		return
+	}
 
 	id, err := h.projService.CreateFromDiscussion(userID, req.DiscussionID)
 	if err != nil {

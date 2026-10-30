@@ -7,23 +7,25 @@ import (
 )
 
 type UserResponse struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	Role        string    `json:"role"`
-	FullName    string    `json:"fullName"`
-	PrefixTitle string    `json:"prefixTitle"`
-	SuffixTitle string    `json:"suffixTitle"`
-	FirstName   string    `json:"firstName"`
-	MiddleName  *string   `json:"middleName"`
-	LastName    string    `json:"lastName"`
-	Affiliation string    `json:"affiliation"`
-	Location    string    `json:"location"`
-	Expertise   string    `json:"expertise"`
-	Bio         string    `json:"bio"`
-	Industry    string    `json:"industry"`
-	AvatarURL   string    `json:"avatar_url"`
-	ViewCount   int64     `json:"view_count"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID                  uuid.UUID `json:"id"`
+	Email               string    `json:"email"`
+	Role                string    `json:"role"`
+	FullName            string    `json:"fullName"`
+	PrefixTitle         string    `json:"prefixTitle"`
+	SuffixTitle         string    `json:"suffixTitle"`
+	FirstName           string    `json:"firstName"`
+	MiddleName          *string   `json:"middleName"`
+	LastName            string    `json:"lastName"`
+	Affiliation         string    `json:"affiliation"`
+	Location            string    `json:"location"`
+	Expertise           string    `json:"expertise"`
+	Bio                 string    `json:"bio"`
+	Industry            string    `json:"industry"`
+	AvatarURL           string    `json:"avatar_url"`
+	ViewCount           int64     `json:"view_count"`
+	OnboardingStatus    string    `json:"onboarding_status"`
+	OnboardingCompleted bool      `json:"onboarding_completed"`
+	CreatedAt           time.Time `json:"created_at"`
 }
 type UserProfileStatsResponse struct {
 	UserResponse

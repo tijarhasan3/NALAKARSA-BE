@@ -13,6 +13,8 @@ type NotificationRepository interface {
 	MarkRead(userID, id uuid.UUID) error
 	MarkAllRead(userID uuid.UUID) error
 	CountUnread(userID uuid.UUID) (int64, error)
+	Delete(userID, id uuid.UUID) error
+	DeleteAll(userID uuid.UUID) error
 }
 
 type pgNotificationRepository struct {
@@ -59,4 +61,12 @@ func (r *pgNotificationRepository) CountUnread(userID uuid.UUID) (int64, error) 
 		Where("user_id = ? AND read_at IS NULL", userID).
 		Count(&count).Error
 	return count, err
+}
+
+func (r *pgNotificationRepository) Delete(userID, id uuid.UUID) error {
+	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Notification{}).Error
+}
+
+func (r *pgNotificationRepository) DeleteAll(userID uuid.UUID) error {
+	return r.db.Where("user_id = ?", userID).Delete(&model.Notification{}).Error
 }

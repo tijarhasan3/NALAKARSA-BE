@@ -30,6 +30,31 @@ type supabaseDeleteRequest struct {
 	Paths    []string `json:"paths,omitempty"`
 }
 
+type supabaseSignedURL struct {
+	SignedURL string `json:"signedURL"`
+}
+
+func parseSupabaseSignedURL(body []byte) (string, error) {
+	var list []supabaseSignedURL
+	if err := json.Unmarshal(body, &list); err == nil {
+		if len(list) > 0 && list[0].SignedURL != "" {
+			return list[0].SignedURL, nil
+		}
+		return "", errors.New("signed URL was not returned")
+	}
+
+	var wrapped struct {
+		SignedURLs []supabaseSignedURL `json:"signedURLs"`
+	}
+	if err := json.Unmarshal(body, &wrapped); err != nil {
+		return "", err
+	}
+	if len(wrapped.SignedURLs) == 0 || wrapped.SignedURLs[0].SignedURL == "" {
+		return "", errors.New("signed URL was not returned")
+	}
+	return wrapped.SignedURLs[0].SignedURL, nil
+}
+
 func UploadAssetToSupabase(userID uuid.UUID, category string, fileHeader *multipart.FileHeader, cfg *config.Config) (string, string, error) {
 	if cfg.SupabaseURL == "" || cfg.SupabaseServiceRoleKey == "" || cfg.SupabaseAssetBucket == "" {
 		return "", "", errors.New("supabase asset storage is not configured")
@@ -106,18 +131,7 @@ func CreateSignedURL(path, bucket string, cfg *config.Config) (string, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		return "", fmt.Errorf("supabase signed URL error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
-	var result struct {
-		SignedURLs []struct {
-			SignedURL string `json:"signedURL"`
-		} `json:"signedURLs"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
-	}
-	if len(result.SignedURLs) == 0 || result.SignedURLs[0].SignedURL == "" {
-		return "", errors.New("signed URL was not returned")
-	}
-	return result.SignedURLs[0].SignedURL, nil
+	return parseSupabaseSignedURL(body)
 }
 
 func isAllowedAssetType(contentType string) bool {
@@ -165,18 +179,7 @@ func CreateChatSignedURL(path string, cfg *config.Config) (string, error) {
 		return "", fmt.Errorf("supabase signed URL error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
 
-	var result struct {
-		SignedURLs []struct {
-			SignedURL string `json:"signedURL"`
-		} `json:"signedURLs"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
-	}
-	if len(result.SignedURLs) == 0 || result.SignedURLs[0].SignedURL == "" {
-		return "", errors.New("signed URL was not returned")
-	}
-	return result.SignedURLs[0].SignedURL, nil
+	return parseSupabaseSignedURL(body)
 }
 
 func UploadChatAttachment(conversationID uuid.UUID, fileHeader *multipart.FileHeader, cfg *config.Config) (string, error) {

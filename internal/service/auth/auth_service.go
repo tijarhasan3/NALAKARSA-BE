@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	"net"
@@ -665,8 +666,20 @@ func (s *emailSender) sendViaBrevoAPI(to string, message emailMessage) error {
 		return fmt.Errorf("Brevo API request failed: %w", err)
 	}
 	defer resp.Body.Close()
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read Brevo response: %w", err)
+	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return fmt.Errorf("Brevo API returned HTTP %s", resp.Status)
+		return fmt.Errorf("Brevo API returned HTTP %s: %s", resp.Status, strings.TrimSpace(string(responseBody)))
+	}
+	var result struct {
+		MessageID string `json:"messageId"`
+	}
+	if err := json.Unmarshal(responseBody, &result); err == nil && result.MessageID != "" {
+		log.Printf("[EMAIL][BREVO][ACCEPTED] recipient=%s message_id=%s", to, result.MessageID)
+	} else {
+		log.Printf("[EMAIL][BREVO][ACCEPTED] recipient=%s", to)
 	}
 	return nil
 }

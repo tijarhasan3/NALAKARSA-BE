@@ -1,22 +1,61 @@
 package dto
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
+type StringOrArray string
+
+func (v *StringOrArray) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		*v = ""
+		return nil
+	}
+
+	var value string
+	if data[0] == '"' {
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		*v = StringOrArray(value)
+		return nil
+	}
+
+	var values []string
+	if data[0] != '[' {
+		return fmt.Errorf("expected string or array of strings")
+	}
+	if err := json.Unmarshal(data, &values); err != nil {
+		return err
+	}
+	cleaned := make([]string, 0, len(values))
+	for _, item := range values {
+		if item = strings.TrimSpace(item); item != "" {
+			cleaned = append(cleaned, item)
+		}
+	}
+	*v = StringOrArray(strings.Join(cleaned, ", "))
+	return nil
+}
+
 type CreateDiscussionRequest struct {
-	Title          string     `json:"title" binding:"required,min=1"`
-	Description    string     `json:"description"`
-	Excerpt        string     `json:"excerpt"`
-	Background     string     `json:"background"`
-	Objective      string     `json:"objective"`
-	ExpectedOutput string     `json:"expected_output"`
-	MediaURL       string     `json:"media_url"`
-	TopicID        *uuid.UUID `json:"topic_id"`
-	Category       string     `json:"category" binding:"required"`
-	Tags           string     `json:"tags"`
+	Title          string        `json:"title" binding:"required,min=1"`
+	Description    string        `json:"description"`
+	Excerpt        string        `json:"excerpt"`
+	Background     string        `json:"background"`
+	Objective      string        `json:"objective"`
+	ExpectedOutput string        `json:"expected_output"`
+	MediaURL       string        `json:"media_url"`
+	TopicID        *uuid.UUID    `json:"topic_id"`
+	Category       string        `json:"category" binding:"required"`
+	Tags           StringOrArray `json:"tags"`
 }
 
 func (r *CreateDiscussionRequest) GetDescription() string {
@@ -30,17 +69,17 @@ func (r *CreateDiscussionRequest) GetDescription() string {
 }
 
 type UpdateDiscussionRequest struct {
-	Title          string     `json:"title" binding:"required,min=1"`
-	Description    string     `json:"description"`
-	Excerpt        string     `json:"excerpt"`
-	Background     string     `json:"background"`
-	Objective      string     `json:"objective"`
-	ExpectedOutput string     `json:"expected_output"`
-	MediaURL       string     `json:"media_url"`
-	TopicID        *uuid.UUID `json:"topic_id"`
-	Category       string     `json:"category" binding:"required"`
-	Tags           string     `json:"tags"`
-	Status         string     `json:"status" binding:"omitempty,oneof=open resolved closed"`
+	Title          string        `json:"title" binding:"required,min=1"`
+	Description    string        `json:"description"`
+	Excerpt        string        `json:"excerpt"`
+	Background     string        `json:"background"`
+	Objective      string        `json:"objective"`
+	ExpectedOutput string        `json:"expected_output"`
+	MediaURL       string        `json:"media_url"`
+	TopicID        *uuid.UUID    `json:"topic_id"`
+	Category       string        `json:"category" binding:"required"`
+	Tags           StringOrArray `json:"tags"`
+	Status         string        `json:"status" binding:"omitempty,oneof=open resolved closed"`
 }
 
 func (r *UpdateDiscussionRequest) GetDescription() string {

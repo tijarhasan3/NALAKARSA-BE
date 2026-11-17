@@ -46,7 +46,7 @@ func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionReq
 		MediaURL:       req.MediaURL,
 		TopicID:        req.TopicID,
 		Category:       req.Category,
-		Tags:           req.Tags,
+		Tags:           string(req.Tags),
 		Status:         "open",
 	}
 
@@ -220,7 +220,7 @@ func (s *discussionService) Update(userID uuid.UUID, id uuid.UUID, req dto.Updat
 	disc.MediaURL = req.MediaURL
 	disc.TopicID = req.TopicID
 	disc.Category = req.Category
-	disc.Tags = req.Tags
+	disc.Tags = string(req.Tags)
 	if req.Status != "" {
 		disc.Status = req.Status
 	}

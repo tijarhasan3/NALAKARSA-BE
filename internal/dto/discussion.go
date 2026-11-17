@@ -53,6 +53,8 @@ type CreateDiscussionRequest struct {
 	Objective      string        `json:"objective"`
 	ExpectedOutput string        `json:"expected_output"`
 	MediaURL       string        `json:"media_url"`
+	AssetURL       string        `json:"asset_url"`
+	ImageURL       string        `json:"image_url"`
 	TopicID        *uuid.UUID    `json:"topic_id"`
 	Category       string        `json:"category" binding:"required"`
 	Tags           StringOrArray `json:"tags"`
@@ -68,6 +70,16 @@ func (r *CreateDiscussionRequest) GetDescription() string {
 	return r.Excerpt
 }
 
+func (r *CreateDiscussionRequest) GetMediaURL() string {
+	if strings.TrimSpace(r.MediaURL) != "" {
+		return strings.TrimSpace(r.MediaURL)
+	}
+	if strings.TrimSpace(r.AssetURL) != "" {
+		return strings.TrimSpace(r.AssetURL)
+	}
+	return strings.TrimSpace(r.ImageURL)
+}
+
 type UpdateDiscussionRequest struct {
 	Title          string        `json:"title" binding:"required,min=1"`
 	Description    string        `json:"description"`
@@ -76,6 +88,8 @@ type UpdateDiscussionRequest struct {
 	Objective      string        `json:"objective"`
 	ExpectedOutput string        `json:"expected_output"`
 	MediaURL       string        `json:"media_url"`
+	AssetURL       string        `json:"asset_url"`
+	ImageURL       string        `json:"image_url"`
 	TopicID        *uuid.UUID    `json:"topic_id"`
 	Category       string        `json:"category" binding:"required"`
 	Tags           StringOrArray `json:"tags"`
@@ -90,6 +104,16 @@ func (r *UpdateDiscussionRequest) GetDescription() string {
 		return r.Background
 	}
 	return r.Excerpt
+}
+
+func (r *UpdateDiscussionRequest) GetMediaURL() string {
+	if strings.TrimSpace(r.MediaURL) != "" {
+		return strings.TrimSpace(r.MediaURL)
+	}
+	if strings.TrimSpace(r.AssetURL) != "" {
+		return strings.TrimSpace(r.AssetURL)
+	}
+	return strings.TrimSpace(r.ImageURL)
 }
 
 type DiscussionCreator struct {

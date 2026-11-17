@@ -43,7 +43,7 @@ func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionReq
 		Background:     req.Background,
 		Objective:      req.Objective,
 		ExpectedOutput: req.ExpectedOutput,
-		MediaURL:       req.MediaURL,
+		MediaURL:       req.GetMediaURL(),
 		TopicID:        req.TopicID,
 		Category:       req.Category,
 		Tags:           string(req.Tags),
@@ -217,7 +217,7 @@ func (s *discussionService) Update(userID uuid.UUID, id uuid.UUID, req dto.Updat
 	disc.Background = req.Background
 	disc.Objective = req.Objective
 	disc.ExpectedOutput = req.ExpectedOutput
-	disc.MediaURL = req.MediaURL
+	disc.MediaURL = req.GetMediaURL()
 	disc.TopicID = req.TopicID
 	disc.Category = req.Category
 	disc.Tags = string(req.Tags)

@@ -43,6 +43,11 @@ func parseSupabaseSignedURL(body []byte) (string, error) {
 		return "", errors.New("signed URL was not returned")
 	}
 
+	var single supabaseSignedURL
+	if err := json.Unmarshal(body, &single); err == nil && single.SignedURL != "" {
+		return single.SignedURL, nil
+	}
+
 	var wrapped struct {
 		SignedURLs []supabaseSignedURL `json:"signedURLs"`
 	}

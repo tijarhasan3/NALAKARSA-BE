@@ -151,7 +151,7 @@ type DiscussionResponse struct {
 	TopicID                *uuid.UUID `json:"topic_id"`
 	Excerpt                string     `json:"excerpt,omitempty"`
 	Category               string     `json:"category"`
-	Tags                   string     `json:"tags"`
+	Tags                   []string   `json:"tags"`
 	Status                 string     `json:"status"`
 	IsInCollaboration      bool       `json:"isInCollaboration"`
 	HasActiveCollaboration bool       `json:"has_active_collaboration"`
@@ -182,7 +182,7 @@ type DiscussionDetailResponse struct {
 	TopicID                *uuid.UUID                `json:"topic_id"`
 	Excerpt                string                    `json:"excerpt,omitempty"`
 	Category               string                    `json:"category"`
-	Tags                   string                    `json:"tags"`
+	Tags                   []string                  `json:"tags"`
 	Status                 string                    `json:"status"`
 	IsInCollaboration      bool                      `json:"isInCollaboration"`
 	HasActiveCollaboration bool                      `json:"has_active_collaboration"`

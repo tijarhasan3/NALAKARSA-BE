@@ -132,7 +132,7 @@ func main() {
 	knowledgeRepo := knowledgerepository.NewKnowledgeRepository(db)
 	authService := authservice.NewAuthService(userRepo, cfg)
 	userService := userservice.NewUserService(userRepo, connRepo, projRepo, notifRepo)
-	discService := discussionservice.NewDiscussionService(discRepo, userRepo)
+	discService := discussionservice.NewDiscussionService(discRepo, userRepo, cfg)
 	expertiseService := expertiseservice.NewExpertiseService(expertiseRepo)
 	skillService := skillservice.NewSkillService(skillRepo)
 	connService := connectionservice.NewConnectionService(connRepo, userRepo)

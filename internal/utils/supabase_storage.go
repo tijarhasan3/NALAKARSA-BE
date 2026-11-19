@@ -34,6 +34,29 @@ type supabaseSignedURL struct {
 	SignedURL string `json:"signedURL"`
 }
 
+// NormalizeSupabaseStorageURL converts Storage API relative URLs into URLs
+// that can be used directly by a browser.
+func NormalizeSupabaseStorageURL(raw string, cfg *config.Config) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || cfg == nil || cfg.SupabaseURL == "" {
+		return raw
+	}
+	if parsed, err := url.Parse(raw); err == nil && parsed.IsAbs() {
+		return raw
+	}
+	base := strings.TrimRight(cfg.SupabaseURL, "/")
+	if strings.HasPrefix(raw, "/storage/v1/") {
+		return base + raw
+	}
+	if strings.HasPrefix(raw, "/object/") {
+		return base + "/storage/v1" + raw
+	}
+	if strings.HasPrefix(raw, "object/") {
+		return base + "/storage/v1/" + raw
+	}
+	return raw
+}
+
 func parseSupabaseSignedURL(body []byte) (string, error) {
 	var list []supabaseSignedURL
 	if err := json.Unmarshal(body, &list); err == nil {
@@ -136,7 +159,11 @@ func CreateSignedURL(path, bucket string, cfg *config.Config) (string, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
 		return "", fmt.Errorf("supabase signed URL error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
-	return parseSupabaseSignedURL(body)
+	signedURL, err := parseSupabaseSignedURL(body)
+	if err != nil {
+		return "", err
+	}
+	return NormalizeSupabaseStorageURL(signedURL, cfg), nil
 }
 
 func isAllowedAssetType(contentType string) bool {
@@ -184,7 +211,11 @@ func CreateChatSignedURL(path string, cfg *config.Config) (string, error) {
 		return "", fmt.Errorf("supabase signed URL error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
 	}
 
-	return parseSupabaseSignedURL(body)
+	signedURL, err := parseSupabaseSignedURL(body)
+	if err != nil {
+		return "", err
+	}
+	return NormalizeSupabaseStorageURL(signedURL, cfg), nil
 }
 
 func UploadChatAttachment(conversationID uuid.UUID, fileHeader *multipart.FileHeader, cfg *config.Config) (string, error) {

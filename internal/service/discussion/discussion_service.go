@@ -4,10 +4,12 @@ import (
 	"errors"
 	"strings"
 
+	"nalakarsa/internal/config"
 	"nalakarsa/internal/dto"
 	"nalakarsa/internal/model"
 	discussionrepository "nalakarsa/internal/repository/discussion"
 	userrepository "nalakarsa/internal/repository/user"
+	"nalakarsa/internal/utils"
 
 	"github.com/google/uuid"
 )
@@ -29,10 +31,25 @@ type DiscussionService interface {
 type discussionService struct {
 	discRepo discussionrepository.DiscussionRepository
 	userRepo userrepository.UserRepository
+	cfg      *config.Config
 }
 
-func NewDiscussionService(discRepo discussionrepository.DiscussionRepository, userRepo userrepository.UserRepository) DiscussionService {
-	return &discussionService{discRepo: discRepo, userRepo: userRepo}
+func NewDiscussionService(discRepo discussionrepository.DiscussionRepository, userRepo userrepository.UserRepository, cfg *config.Config) DiscussionService {
+	return &discussionService{discRepo: discRepo, userRepo: userRepo, cfg: cfg}
+}
+
+func splitTags(value string) []string {
+	result := make([]string, 0)
+	for _, tag := range strings.Split(value, ",") {
+		if tag = strings.TrimSpace(tag); tag != "" {
+			result = append(result, tag)
+		}
+	}
+	return result
+}
+
+func (s *discussionService) mediaURL(value string) string {
+	return utils.NormalizeSupabaseStorageURL(value, s.cfg)
 }
 
 func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionRequest) (uuid.UUID, error) {
@@ -81,11 +98,11 @@ func (s *discussionService) GetByID(id uuid.UUID, currentUserID *uuid.UUID) (*dt
 		Background:             disc.Background,
 		Objective:              disc.Objective,
 		ExpectedOutput:         disc.ExpectedOutput,
-		MediaURL:               disc.MediaURL,
+		MediaURL:               s.mediaURL(disc.MediaURL),
 		TopicID:                disc.TopicID,
 		Excerpt:                disc.Description,
 		Category:               disc.Category,
-		Tags:                   disc.Tags,
+		Tags:                   splitTags(disc.Tags),
 		Status:                 disc.Status,
 		IsInCollaboration:      disc.IsInCollaboration,
 		HasActiveCollaboration: disc.IsInCollaboration,
@@ -174,10 +191,10 @@ func (s *discussionService) List(search, category, role, sort string, page, limi
 			Background:             d.Background,
 			Objective:              d.Objective,
 			ExpectedOutput:         d.ExpectedOutput,
-			MediaURL:               d.MediaURL,
+			MediaURL:               s.mediaURL(d.MediaURL),
 			TopicID:                d.TopicID,
 			Category:               d.Category,
-			Tags:                   d.Tags,
+			Tags:                   splitTags(d.Tags),
 			Status:                 d.Status,
 			IsInCollaboration:      d.IsInCollaboration,
 			HasActiveCollaboration: d.IsInCollaboration,
@@ -185,6 +202,8 @@ func (s *discussionService) List(search, category, role, sort string, page, limi
 			UpvoteCount:            upvoteCount,
 			HasUpvoted:             hasUpvoted,
 			Time:                   d.CreatedAt,
+			CreatedAt:              d.CreatedAt,
+			UpdatedAt:              d.UpdatedAt,
 			AuthorID:               d.User.ID,
 			Author:                 formatAuthorName(d.User.PrefixTitle, d.User.FullName, d.User.SuffixTitle),
 			PrefixTitle:            d.User.PrefixTitle,

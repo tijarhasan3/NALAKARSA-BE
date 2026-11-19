@@ -242,6 +242,7 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 	}
 	_ = db.Exec("ALTER TABLE discussions ADD COLUMN IF NOT EXISTS replies_count BIGINT DEFAULT 0 NOT NULL").Error
 	_ = db.Exec("ALTER TABLE discussions ADD COLUMN IF NOT EXISTS upvote_count BIGINT DEFAULT 0 NOT NULL").Error
+	_ = db.Exec("ALTER TABLE discussions ADD COLUMN IF NOT EXISTS visibility VARCHAR(20) NOT NULL DEFAULT 'public'").Error
 	_ = db.Exec("CREATE EXTENSION IF NOT EXISTS pg_trgm").Error
 	_ = db.Exec("DELETE FROM refresh_tokens WHERE expires_at <= NOW()").Error
 	_ = db.Exec("CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens (expires_at)").Error

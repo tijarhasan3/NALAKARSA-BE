@@ -57,6 +57,7 @@ type CreateDiscussionRequest struct {
 	ImageURL       string        `json:"image_url"`
 	TopicID        *uuid.UUID    `json:"topic_id"`
 	Category       string        `json:"category" binding:"required"`
+	Visibility     string        `json:"visibility"`
 	Tags           StringOrArray `json:"tags"`
 }
 
@@ -92,6 +93,7 @@ type UpdateDiscussionRequest struct {
 	ImageURL       string        `json:"image_url"`
 	TopicID        *uuid.UUID    `json:"topic_id"`
 	Category       string        `json:"category" binding:"required"`
+	Visibility     string        `json:"visibility"`
 	Tags           StringOrArray `json:"tags"`
 	Status         string        `json:"status" binding:"omitempty,oneof=open resolved closed"`
 }
@@ -154,6 +156,7 @@ type DiscussionResponse struct {
 	Category               string     `json:"category"`
 	Tags                   []string   `json:"tags"`
 	Status                 string     `json:"status"`
+	Visibility             string     `json:"visibility"`
 	IsInCollaboration      bool       `json:"isInCollaboration"`
 	HasActiveCollaboration bool       `json:"has_active_collaboration"`
 	CollaborationID        *uuid.UUID `json:"collaboration_id,omitempty"`
@@ -186,6 +189,7 @@ type DiscussionDetailResponse struct {
 	Category               string                    `json:"category"`
 	Tags                   []string                  `json:"tags"`
 	Status                 string                    `json:"status"`
+	Visibility             string                    `json:"visibility"`
 	IsInCollaboration      bool                      `json:"isInCollaboration"`
 	HasActiveCollaboration bool                      `json:"has_active_collaboration"`
 	CollaborationID        *uuid.UUID                `json:"collaboration_id,omitempty"`

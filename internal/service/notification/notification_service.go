@@ -36,26 +36,44 @@ func (s *notificationService) ListNotifications(userID uuid.UUID, page, limit in
 	for i, n := range notifs {
 		actorName := ""
 		var payload struct {
-			Title   string `json:"title"`
-			Message string `json:"message"`
+			Title        string     `json:"title"`
+			Message      string     `json:"message"`
+			DiscussionID *uuid.UUID `json:"discussionId"`
+			ProjectID    *uuid.UUID `json:"projectId"`
+			RequestID    *uuid.UUID `json:"requestId"`
+			Status       string     `json:"status"`
 		}
 		_ = json.Unmarshal([]byte(n.Payload), &payload)
 		if n.Actor != nil {
 			actorName = n.Actor.FullName
 		}
 
+		var actor *dto.NotificationActor
+		if n.Actor != nil {
+			actor = &dto.NotificationActor{
+				ID: n.Actor.ID, FullName: n.Actor.FullName, Role: n.Actor.Role,
+				Affiliation: n.Actor.Affiliation, AvatarURL: n.Actor.AvatarURL,
+			}
+		}
 		res[i] = dto.NotificationResponse{
-			ID:           n.ID,
-			Type:         n.Type,
-			ActorID:      n.ActorID,
-			ActorName:    actorName,
-			ResourceType: n.ResourceType,
-			ResourceID:   n.ResourceID,
-			Message:      payload.Message,
-			Title:        payload.Title,
-			ReadAt:       n.ReadAt,
-			IsRead:       n.ReadAt != nil,
-			CreatedAt:    n.CreatedAt,
+			ID:             n.ID,
+			Type:           n.Type,
+			ActorID:        n.ActorID,
+			ActorName:      actorName,
+			ResourceType:   n.ResourceType,
+			ResourceID:     n.ResourceID,
+			Message:        payload.Message,
+			Title:          payload.Title,
+			Actor:          actor,
+			DiscussionID:   payload.DiscussionID,
+			ProjectID:      payload.ProjectID,
+			RequestID:      payload.RequestID,
+			Status:         payload.Status,
+			ReadAt:         n.ReadAt,
+			IsRead:         n.ReadAt != nil,
+			IsReadCamel:    n.ReadAt != nil,
+			CreatedAt:      n.CreatedAt,
+			CreatedAtCamel: n.CreatedAt,
 		}
 	}
 

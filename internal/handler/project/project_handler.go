@@ -2,6 +2,7 @@ package projecthandler
 
 import (
 	"net/http"
+	"strings"
 
 	"nalakarsa/internal/dto"
 	projectservice "nalakarsa/internal/service/project"
@@ -318,6 +319,19 @@ func (h *ProjectHandler) SubmitCollabRequest(c *gin.Context) {
 }
 
 func (h *ProjectHandler) submitCollabRequest(c *gin.Context, userID uuid.UUID, req dto.SubmitCollaborationRequest) {
+	if req.DiscussionID == nil {
+		req.DiscussionID = req.DiscussionIDSnake
+	}
+	if req.ProjectID == nil {
+		req.ProjectID = req.ProjectIDSnake
+	}
+	if req.ProposedContribution == "" {
+		req.ProposedContribution = req.ProposedContributionSnake
+	}
+	if strings.TrimSpace(req.ProposedContribution) == "" {
+		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "proposed_contribution is required")
+		return
+	}
 	res, err := h.projService.SubmitCollabRequest(userID, req)
 	if err != nil {
 		statusCode := http.StatusBadRequest
@@ -386,6 +400,14 @@ func (h *ProjectHandler) ApproveCollabRequest(c *gin.Context) {
 		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "Invalid collaboration request ID format")
 		return
 	}
+	var req dto.ApproveCollaborationRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			utils.ValidationErrorResponse(c, err)
+			return
+		}
+	}
+	_ = req
 
 	res, err := h.projService.ApproveCollabRequest(requestID, userID)
 	if err != nil {
@@ -440,8 +462,16 @@ func (h *ProjectHandler) RejectCollabRequest(c *gin.Context) {
 		utils.ErrorJSONResponseWithMessage(c, http.StatusBadRequest, "Invalid collaboration request ID format")
 		return
 	}
+	var req dto.RejectCollaborationRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			utils.ValidationErrorResponse(c, err)
+			return
+		}
+	}
+	_ = req
 
-	res, err := h.projService.RejectCollabRequest(requestID, userID)
+	res, err := h.projService.RejectCollabRequest(requestID, userID, req.Reason)
 	if err != nil {
 		statusCode := http.StatusBadRequest
 		if err.Error() == "collaboration request not found" {

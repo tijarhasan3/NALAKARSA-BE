@@ -65,6 +65,13 @@ func discussionAvatarURL(user model.User) string {
 }
 
 func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionRequest) (uuid.UUID, error) {
+	visibility := strings.ToLower(strings.TrimSpace(req.Visibility))
+	if visibility == "" {
+		visibility = "public"
+	}
+	if visibility != "public" && visibility != "private" {
+		return uuid.Nil, errors.New("visibility must be public or private")
+	}
 	disc := &model.Discussion{
 		UserID:         userID,
 		Title:          req.Title,
@@ -77,6 +84,7 @@ func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionReq
 		Category:       req.Category,
 		Tags:           string(req.Tags),
 		Status:         "open",
+		Visibility:     visibility,
 	}
 
 	if err := s.discRepo.Create(disc); err != nil {
@@ -116,6 +124,7 @@ func (s *discussionService) GetByID(id uuid.UUID, currentUserID *uuid.UUID) (*dt
 		Category:               disc.Category,
 		Tags:                   splitTags(disc.Tags),
 		Status:                 disc.Status,
+		Visibility:             disc.Visibility,
 		IsInCollaboration:      disc.IsInCollaboration,
 		HasActiveCollaboration: disc.IsInCollaboration,
 		Replies:                replyCount,
@@ -210,6 +219,7 @@ func (s *discussionService) List(search, category, role, sort string, page, limi
 			Category:               d.Category,
 			Tags:                   splitTags(d.Tags),
 			Status:                 d.Status,
+			Visibility:             d.Visibility,
 			IsInCollaboration:      d.IsInCollaboration,
 			HasActiveCollaboration: d.IsInCollaboration,
 			Replies:                replyCount,

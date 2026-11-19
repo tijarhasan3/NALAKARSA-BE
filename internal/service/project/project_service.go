@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"nalakarsa/internal/common/constant"
@@ -33,7 +34,7 @@ type ProjectService interface {
 	SubmitCollabRequest(applicantID uuid.UUID, req dto.SubmitCollaborationRequest) (*dto.CollaborationRequestItemResponse, error)
 	ListCollabRequests(userID uuid.UUID) ([]dto.CollaborationRequestItemResponse, error)
 	ApproveCollabRequest(requestID, initiatorID uuid.UUID) (*dto.ApproveCollaborationResponse, error)
-	RejectCollabRequest(requestID, initiatorID uuid.UUID) (*dto.RejectCollaborationResponse, error)
+	RejectCollabRequest(requestID, initiatorID uuid.UUID, reason string) (*dto.RejectCollaborationResponse, error)
 	WithdrawCollabRequest(requestID, applicantID uuid.UUID) error
 }
 
@@ -480,6 +481,9 @@ func (s *projectService) SubmitCollabRequest(applicantID uuid.UUID, req dto.Subm
 		if disc.UserID == applicantID {
 			return nil, errors.New("cannot apply for collaboration on your own discussion topic")
 		}
+		if strings.EqualFold(strings.TrimSpace(disc.Visibility), "private") {
+			return nil, errors.New("private discussion does not accept public collaboration requests")
+		}
 		targetOwnerID = disc.UserID
 		title = disc.Title
 	} else if req.ProjectID != nil {
@@ -513,8 +517,12 @@ func (s *projectService) SubmitCollabRequest(applicantID uuid.UUID, req dto.Subm
 		return nil, err
 	}
 	notifPayload, _ := json.Marshal(map[string]interface{}{
-		"title":   "New Collaboration Request",
-		"message": fmt.Sprintf("%s has submitted a collaboration request on '%s'", applicant.FullName, title),
+		"title":        "New Collaboration Request",
+		"message":      fmt.Sprintf("%s has submitted a collaboration request on '%s'", applicant.FullName, title),
+		"discussionId": req.DiscussionID,
+		"projectId":    req.ProjectID,
+		"requestId":    collabReq.ID,
+		"status":       constant.CollabStatusPending,
 	})
 
 	notif := model.Notification{
@@ -528,18 +536,25 @@ func (s *projectService) SubmitCollabRequest(applicantID uuid.UUID, req dto.Subm
 	_ = s.notifRepo.Create(&notif)
 
 	return &dto.CollaborationRequestItemResponse{
-		ID:                   collabReq.ID,
-		DiscussionID:         collabReq.DiscussionID,
-		ProjectID:            collabReq.ProjectID,
-		Title:                title,
-		ProposedContribution: collabReq.ProposedContribution,
-		Status:               collabReq.Status,
-		CreatedAt:            collabReq.CreatedAt,
+		ID:                        collabReq.ID,
+		DiscussionID:              collabReq.DiscussionID,
+		DiscussionIDSnake:         collabReq.DiscussionID,
+		ProjectID:                 collabReq.ProjectID,
+		ProjectIDSnake:            collabReq.ProjectID,
+		Title:                     title,
+		ProposedContribution:      collabReq.ProposedContribution,
+		ProposedContributionSnake: collabReq.ProposedContribution,
+		ApplicantID:               applicant.ID,
+		Status:                    collabReq.Status,
+		CreatedAt:                 collabReq.CreatedAt,
+		CreatedAtSnake:            collabReq.CreatedAt,
 		Applicant: dto.CollabApplicantResponse{
-			ID:        applicant.ID,
-			FullName:  applicant.FullName,
-			Role:      applicant.Role,
-			AvatarURL: applicant.AvatarURL,
+			ID:          applicant.ID,
+			FullName:    applicant.FullName,
+			Role:        applicant.Role,
+			Affiliation: applicant.Affiliation,
+			AvatarURL:   applicant.AvatarURL,
+			AvatarUrl:   applicant.AvatarURL,
 		},
 	}, nil
 }
@@ -560,19 +575,26 @@ func (s *projectService) ListCollabRequests(userID uuid.UUID) ([]dto.Collaborati
 		}
 
 		res[i] = dto.CollaborationRequestItemResponse{
-			ID:                   r.ID,
-			DiscussionID:         r.DiscussionID,
-			ProjectID:            r.ProjectID,
-			Title:                title,
-			ProposedContribution: r.ProposedContribution,
-			Status:               r.Status,
-			RejectionReason:      r.RejectionReason,
-			CreatedAt:            r.CreatedAt,
+			ID:                        r.ID,
+			DiscussionID:              r.DiscussionID,
+			DiscussionIDSnake:         r.DiscussionID,
+			ProjectID:                 r.ProjectID,
+			ProjectIDSnake:            r.ProjectID,
+			Title:                     title,
+			ProposedContribution:      r.ProposedContribution,
+			ProposedContributionSnake: r.ProposedContribution,
+			ApplicantID:               r.ApplicantID,
+			Status:                    r.Status,
+			RejectionReason:           r.RejectionReason,
+			CreatedAt:                 r.CreatedAt,
+			CreatedAtSnake:            r.CreatedAt,
 			Applicant: dto.CollabApplicantResponse{
-				ID:        r.Applicant.ID,
-				FullName:  r.Applicant.FullName,
-				Role:      r.Applicant.Role,
-				AvatarURL: r.Applicant.AvatarURL,
+				ID:          r.Applicant.ID,
+				FullName:    r.Applicant.FullName,
+				Role:        r.Applicant.Role,
+				Affiliation: r.Applicant.Affiliation,
+				AvatarURL:   r.Applicant.AvatarURL,
+				AvatarUrl:   r.Applicant.AvatarURL,
 			},
 		}
 	}
@@ -599,6 +621,18 @@ func (s *projectService) ApproveCollabRequest(requestID, initiatorID uuid.UUID) 
 	if groupChat != nil {
 		groupChatID = groupChat.ID
 	}
+	visibility := "public"
+	var discussionID *uuid.UUID
+	if req.Discussion != nil {
+		discussionID = &req.Discussion.ID
+		if strings.TrimSpace(req.Discussion.Visibility) != "" {
+			visibility = req.Discussion.Visibility
+		}
+	}
+	collaborationID := uuid.Nil
+	if projectID != nil {
+		collaborationID = *projectID
+	}
 	if s.notifRepo != nil {
 		notifPayload, _ := json.Marshal(map[string]interface{}{
 			"title":   "Collaboration Request Approved",
@@ -617,10 +651,20 @@ func (s *projectService) ApproveCollabRequest(requestID, initiatorID uuid.UUID) 
 	}
 
 	return &dto.ApproveCollaborationResponse{
-		RequestID:   req.ID,
-		Status:      req.Status,
-		ProjectID:   projectID,
-		GroupChatID: groupChatID,
+		RequestID:      req.ID,
+		RequestIDSnake: req.ID,
+		Status:         req.Status,
+		ProjectID:      projectID,
+		GroupChatID:    groupChatID,
+		Collaboration: dto.CollaborationResponse{
+			ID:           collaborationID,
+			DiscussionID: discussionID,
+			InitiatorID:  initiatorID,
+			Members:      []uuid.UUID{initiatorID, req.ApplicantID},
+			Status:       "ACTIVE",
+			Visibility:   visibility,
+			GroupChatID:  groupChatID,
+		},
 	}, nil
 }
 
@@ -628,9 +672,12 @@ func (s *projectService) WithdrawCollabRequest(requestID, applicantID uuid.UUID)
 	return s.projRepo.WithdrawCollabRequest(requestID, applicantID)
 }
 
-func (s *projectService) RejectCollabRequest(requestID, initiatorID uuid.UUID) (*dto.RejectCollaborationResponse, error) {
-	collabReq, err := s.projRepo.RejectCollabRequest(requestID, initiatorID)
+func (s *projectService) RejectCollabRequest(requestID, initiatorID uuid.UUID, reason string) (*dto.RejectCollaborationResponse, error) {
+	collabReq, err := s.projRepo.RejectCollabRequest(requestID, initiatorID, reason)
 	if err != nil {
+		if collabReq == nil {
+			return nil, err
+		}
 		notifPayload, _ := json.Marshal(map[string]interface{}{
 			"title":   "Collaboration Request Rejected",
 			"message": "Your collaboration request was rejected.",
@@ -679,7 +726,8 @@ func (s *projectService) RejectCollabRequest(requestID, initiatorID uuid.UUID) (
 	}
 
 	return &dto.RejectCollaborationResponse{
-		RequestID: collabReq.ID,
-		Status:    collabReq.Status,
+		RequestID:      collabReq.ID,
+		RequestIDSnake: collabReq.ID,
+		Status:         collabReq.Status,
 	}, nil
 }

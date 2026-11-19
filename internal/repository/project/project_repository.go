@@ -38,7 +38,7 @@ type ProjectRepository interface {
 	ListCollabRequestsForUser(userID uuid.UUID) ([]model.CollaborationRequest, error)
 	HasPendingCollabRequest(applicantID uuid.UUID, discussionID, projectID *uuid.UUID) (bool, error)
 	ApproveCollabRequest(requestID, initiatorID uuid.UUID) (*model.CollaborationRequest, *model.Project, *model.GroupChat, error)
-	RejectCollabRequest(requestID, initiatorID uuid.UUID) (*model.CollaborationRequest, error)
+	RejectCollabRequest(requestID, initiatorID uuid.UUID, reason string) (*model.CollaborationRequest, error)
 	WithdrawCollabRequest(requestID, applicantID uuid.UUID) error
 }
 
@@ -474,7 +474,7 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 	return &collabReq, &targetProject, &targetGroupChat, nil
 }
 
-func (r *pgProjectRepository) RejectCollabRequest(requestID, initiatorID uuid.UUID) (*model.CollaborationRequest, error) {
+func (r *pgProjectRepository) RejectCollabRequest(requestID, initiatorID uuid.UUID, reason string) (*model.CollaborationRequest, error) {
 	var collabReq model.CollaborationRequest
 	if err := r.db.Preload("Applicant").Preload("Discussion").Preload("Project").Where("id = ?", requestID).First(&collabReq).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -510,6 +510,10 @@ func (r *pgProjectRepository) RejectCollabRequest(requestID, initiatorID uuid.UU
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		collabReq.Status = constant.CollabStatusRejected
+		if strings.TrimSpace(reason) != "" {
+			reason = strings.TrimSpace(reason)
+			collabReq.RejectionReason = &reason
+		}
 		if err := tx.Save(&collabReq).Error; err != nil {
 			return err
 		}

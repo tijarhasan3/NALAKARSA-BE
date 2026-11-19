@@ -80,40 +80,75 @@ type UpdateApplicationStatusRequest struct {
 }
 
 type SubmitCollaborationRequest struct {
-	DiscussionID         *uuid.UUID `json:"discussionId"`
-	ProjectID            *uuid.UUID `json:"projectId"`
-	ProposedContribution string     `json:"proposedContribution" binding:"required,min=1"`
+	DiscussionID              *uuid.UUID `json:"discussionId"`
+	DiscussionIDSnake         *uuid.UUID `json:"discussion_id"`
+	ProjectID                 *uuid.UUID `json:"projectId"`
+	ProjectIDSnake            *uuid.UUID `json:"project_id"`
+	ProposedContribution      string     `json:"proposedContribution"`
+	ProposedContributionSnake string     `json:"proposed_contribution"`
 }
 
 type CollabApplicantResponse struct {
-	ID        uuid.UUID `json:"id"`
-	FullName  string    `json:"fullName"`
-	Role      string    `json:"role"`
-	AvatarURL string    `json:"avatar_url,omitempty"`
+	ID          uuid.UUID `json:"id"`
+	FullName    string    `json:"fullName"`
+	Role        string    `json:"role"`
+	Affiliation string    `json:"affiliation"`
+	AvatarURL   string    `json:"avatar_url,omitempty"`
+	AvatarUrl   string    `json:"avatarUrl,omitempty"`
 }
 
 type CollaborationRequestItemResponse struct {
-	ID                   uuid.UUID               `json:"id"`
-	DiscussionID         *uuid.UUID              `json:"discussionId,omitempty"`
-	ProjectID            *uuid.UUID              `json:"projectId,omitempty"`
-	Title                string                  `json:"title,omitempty"`
-	ProposedContribution string                  `json:"proposedContribution"`
-	Status               string                  `json:"status"`
-	RejectionReason      *string                 `json:"rejectionReason,omitempty"`
-	CreatedAt            time.Time               `json:"createdAt"`
-	Applicant            CollabApplicantResponse `json:"applicant"`
+	ID                        uuid.UUID               `json:"id"`
+	DiscussionID              *uuid.UUID              `json:"discussionId,omitempty"`
+	DiscussionIDSnake         *uuid.UUID              `json:"discussion_id,omitempty"`
+	ProjectID                 *uuid.UUID              `json:"projectId,omitempty"`
+	ProjectIDSnake            *uuid.UUID              `json:"project_id,omitempty"`
+	Title                     string                  `json:"title,omitempty"`
+	ProposedContribution      string                  `json:"proposedContribution"`
+	ProposedContributionSnake string                  `json:"proposed_contribution"`
+	ApplicantID               uuid.UUID               `json:"applicant_id"`
+	Status                    string                  `json:"status"`
+	RejectionReason           *string                 `json:"rejectionReason,omitempty"`
+	CreatedAt                 time.Time               `json:"createdAt"`
+	CreatedAtSnake            time.Time               `json:"created_at"`
+	Applicant                 CollabApplicantResponse `json:"applicant"`
 }
 
 type ApproveCollaborationResponse struct {
-	RequestID   uuid.UUID  `json:"requestId"`
-	Status      string     `json:"status"`
-	ProjectID   *uuid.UUID `json:"projectId"`
-	GroupChatID uuid.UUID  `json:"groupChatId"`
+	RequestID      uuid.UUID             `json:"requestId"`
+	RequestIDSnake uuid.UUID             `json:"request_id"`
+	Status         string                `json:"status"`
+	ProjectID      *uuid.UUID            `json:"projectId"`
+	GroupChatID    uuid.UUID             `json:"groupChatId"`
+	Collaboration  CollaborationResponse `json:"collaboration"`
+}
+
+type ApproveCollaborationRequest struct {
+	Title          string `json:"title"`
+	Background     string `json:"background"`
+	Objective      string `json:"objective"`
+	ExpectedOutput string `json:"expected_output"`
+	Visibility     string `json:"visibility"`
+}
+
+type RejectCollaborationRequest struct {
+	Reason string `json:"reason"`
+}
+
+type CollaborationResponse struct {
+	ID           uuid.UUID   `json:"id"`
+	DiscussionID *uuid.UUID  `json:"discussion_id,omitempty"`
+	InitiatorID  uuid.UUID   `json:"initiator_id"`
+	Members      []uuid.UUID `json:"members"`
+	Status       string      `json:"status"`
+	Visibility   string      `json:"visibility"`
+	GroupChatID  uuid.UUID   `json:"group_chat_id"`
 }
 
 type RejectCollaborationResponse struct {
-	RequestID uuid.UUID `json:"requestId"`
-	Status    string    `json:"status"`
+	RequestID      uuid.UUID `json:"requestId"`
+	RequestIDSnake uuid.UUID `json:"request_id"`
+	Status         string    `json:"status"`
 }
 
 type ProjectMemberResponse struct {

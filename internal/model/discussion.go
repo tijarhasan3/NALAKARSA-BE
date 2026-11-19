@@ -19,7 +19,8 @@ type Discussion struct {
 	TopicID            *uuid.UUID        `gorm:"type:uuid;index"`
 	Category           string            `gorm:"type:varchar(100);index;not null"`
 	Tags               string            `gorm:"type:varchar(255);default:'';not null"`
-	Status             string            `gorm:"type:varchar(20);index;default:'open';not null"` // open, resolved, closed
+	Status             string            `gorm:"type:varchar(20);index;default:'open';not null"`   // open, resolved, closed
+	Visibility         string            `gorm:"type:varchar(20);index;default:'public';not null"` // public, private
 	IsInCollaboration  bool              `gorm:"default:false;not null"`
 	SourceDiscussionID *uuid.UUID        `gorm:"type:uuid;index"`
 	RepliesCount       int64             `gorm:"default:0;not null"`

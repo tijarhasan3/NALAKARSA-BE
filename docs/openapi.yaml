@@ -1452,11 +1452,49 @@ paths:
               type: object
               required: [proposedContribution]
               properties:
-                role_id: { type: string }
-                role_note: { type: string }
-                proposedContribution: { type: string }
+                discussion_id: { type: string, format: uuid }
+                proposed_contribution: { type: string }
+                proposedContribution: { type: string, description: Alias camelCase }
       responses:
         '201': { description: Collaboration request berhasil dibuat }
+
+  /collaborations/requests:
+    get:
+      tags: [Collaborations]
+      summary: Daftar pengajuan kolaborasi yang relevan
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200': { description: Pengajuan milik user atau pengajuan untuk diskusinya }
+
+  /collaborations/requests/{id}/approve:
+    patch:
+      tags: [Collaborations]
+      summary: Menyetujui pengajuan kolaborasi
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Pengajuan diterima dan kolaborasi aktif dibuat }
+        '403': { description: Hanya pemilik diskusi/project yang dapat menyetujui }
+
+  /collaborations/requests/{id}/reject:
+    patch:
+      tags: [Collaborations]
+      summary: Menolak pengajuan kolaborasi
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200': { description: Pengajuan ditolak }
+        '403': { description: Hanya pemilik diskusi/project yang dapat menolak }
 
   /discussions/{id}/comments:
     post:

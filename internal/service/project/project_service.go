@@ -545,7 +545,7 @@ func (s *projectService) SubmitCollabRequest(applicantID uuid.UUID, req dto.Subm
 		ProposedContribution:      collabReq.ProposedContribution,
 		ProposedContributionSnake: collabReq.ProposedContribution,
 		ApplicantID:               applicant.ID,
-		Status:                    collabReq.Status,
+		Status:                    strings.ToUpper(strings.TrimSpace(collabReq.Status)),
 		CreatedAt:                 collabReq.CreatedAt,
 		CreatedAtSnake:            collabReq.CreatedAt,
 		Applicant: dto.CollabApplicantResponse{
@@ -584,7 +584,7 @@ func (s *projectService) ListCollabRequests(userID uuid.UUID) ([]dto.Collaborati
 			ProposedContribution:      r.ProposedContribution,
 			ProposedContributionSnake: r.ProposedContribution,
 			ApplicantID:               r.ApplicantID,
-			Status:                    r.Status,
+			Status:                    strings.ToUpper(strings.TrimSpace(r.Status)),
 			RejectionReason:           r.RejectionReason,
 			CreatedAt:                 r.CreatedAt,
 			CreatedAtSnake:            r.CreatedAt,

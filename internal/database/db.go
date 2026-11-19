@@ -230,6 +230,7 @@ func InitDB(cfg *config.Config) (*gorm.DB, error) {
 		`ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_size BIGINT DEFAULT 0`,
 		`ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_type VARCHAR(20)`,
 		`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS attachment_path TEXT`,
+		`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS client_message_id VARCHAR(120)`,
 		`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(255)`,
 		`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS attachment_mime_type VARCHAR(100)`,
 		`ALTER TABLE group_messages ADD COLUMN IF NOT EXISTS attachment_size BIGINT DEFAULT 0`,

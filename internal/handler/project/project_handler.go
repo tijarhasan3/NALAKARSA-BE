@@ -411,11 +411,13 @@ func (h *ProjectHandler) ApproveCollabRequest(c *gin.Context) {
 
 	res, err := h.projService.ApproveCollabRequest(requestID, userID)
 	if err != nil {
-		statusCode := http.StatusBadRequest
+		statusCode := http.StatusInternalServerError
 		if err.Error() == "collaboration request not found" {
 			statusCode = http.StatusNotFound
 		} else if err.Error() == "only project/topic initiator can approve collaboration requests" {
 			statusCode = http.StatusForbidden
+		} else if err.Error() == "collaboration request has already been processed" {
+			statusCode = http.StatusConflict
 		}
 		utils.ErrorJSONResponseWithMessage(c, statusCode, err.Error())
 		return
@@ -473,11 +475,13 @@ func (h *ProjectHandler) RejectCollabRequest(c *gin.Context) {
 
 	res, err := h.projService.RejectCollabRequest(requestID, userID, req.Reason)
 	if err != nil {
-		statusCode := http.StatusBadRequest
+		statusCode := http.StatusInternalServerError
 		if err.Error() == "collaboration request not found" {
 			statusCode = http.StatusNotFound
 		} else if err.Error() == "only project/topic initiator can reject collaboration requests" {
 			statusCode = http.StatusForbidden
+		} else if err.Error() == "collaboration request has already been processed" {
+			statusCode = http.StatusConflict
 		}
 		utils.ErrorJSONResponseWithMessage(c, statusCode, err.Error())
 		return

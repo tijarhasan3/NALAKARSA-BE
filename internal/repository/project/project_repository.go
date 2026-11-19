@@ -237,7 +237,7 @@ func (r *pgProjectRepository) GetCollabRequestByID(id uuid.UUID) (*model.Collabo
 func (r *pgProjectRepository) HasPendingCollabRequest(applicantID uuid.UUID, discussionID, projectID *uuid.UUID) (bool, error) {
 	var count int64
 	q := r.db.Model(&model.CollaborationRequest{}).
-		Where("applicant_id = ? AND status = 'PENDING'", applicantID)
+		Where("applicant_id = ? AND LOWER(status) = 'pending'", applicantID)
 
 	if discussionID != nil {
 		q = q.Where("discussion_id = ?", *discussionID)
@@ -273,7 +273,7 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 		return nil, nil, nil, err
 	}
 
-	if collabReq.Status != "PENDING" {
+	if !strings.EqualFold(strings.TrimSpace(collabReq.Status), constant.CollabStatusPending) {
 		return nil, nil, nil, errors.New("collaboration request has already been processed")
 	}
 	var isAuthorized bool
@@ -303,13 +303,13 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		collabReq.Status = constant.CollabStatusAccepted
 		if err := tx.Save(&collabReq).Error; err != nil {
-			return err
+			return fmt.Errorf("failed to update collaboration request: %w", err)
 		}
 		if collabReq.DiscussionID != nil {
 			if err := tx.Model(&model.Discussion{}).
 				Where("id = ?", *collabReq.DiscussionID).
 				Update("is_in_collaboration", true).Error; err != nil {
-				return err
+				return fmt.Errorf("failed to mark discussion collaboration active: %w", err)
 			}
 		}
 		var proj model.Project
@@ -328,7 +328,7 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 		if projectFound {
 			proj.Status = "Partner Confirmed"
 			if err := tx.Save(&proj).Error; err != nil {
-				return err
+				return fmt.Errorf("failed to update collaboration project: %w", err)
 			}
 		} else {
 			var disc model.Discussion
@@ -355,31 +355,37 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 				SourceDiscussionID: collabReq.DiscussionID,
 			}
 			if err := tx.Create(&proj).Error; err != nil {
-				return err
+				return fmt.Errorf("failed to create collaboration project: %w", err)
 			}
 		}
 		if collabReq.ProjectID == nil {
 			collabReq.ProjectID = &proj.ID
-			tx.Model(&model.CollaborationRequest{}).Where("id = ?", collabReq.ID).Update("project_id", proj.ID)
+			if err := tx.Model(&model.CollaborationRequest{}).Where("id = ?", collabReq.ID).Update("project_id", proj.ID).Error; err != nil {
+				return fmt.Errorf("failed to link collaboration project: %w", err)
+			}
 		}
 		targetProject = proj
 		var memberInitiator model.ProjectMember
 		if err := tx.Where("project_id = ? AND user_id = ?", proj.ID, initiatorID).First(&memberInitiator).Error; err != nil {
-			tx.Create(&model.ProjectMember{
+			if err := tx.Create(&model.ProjectMember{
 				ProjectID: proj.ID,
 				UserID:    initiatorID,
 				Role:      "Initiator",
 				Status:    "active",
-			})
+			}).Error; err != nil {
+				return fmt.Errorf("failed to add collaboration initiator: %w", err)
+			}
 		}
 		var memberApplicant model.ProjectMember
 		if err := tx.Where("project_id = ? AND user_id = ?", proj.ID, collabReq.ApplicantID).First(&memberApplicant).Error; err != nil {
-			tx.Create(&model.ProjectMember{
+			if err := tx.Create(&model.ProjectMember{
 				ProjectID: proj.ID,
 				UserID:    collabReq.ApplicantID,
 				Role:      "Collaboration Partner",
 				Status:    "active",
-			})
+			}).Error; err != nil {
+				return fmt.Errorf("failed to add collaboration applicant: %w", err)
+			}
 		}
 		var groupChat model.GroupChat
 		var groupChatFound bool
@@ -418,30 +424,36 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 				LastMessageTime: &now,
 			}
 			if err := tx.Create(&groupChat).Error; err != nil {
-				return err
+				return fmt.Errorf("failed to create collaboration group chat: %w", err)
 			}
 		} else {
 			groupChat.LastMessage = &welcomeMsg
 			groupChat.LastMessageTime = &now
-			tx.Save(&groupChat)
+			if err := tx.Save(&groupChat).Error; err != nil {
+				return fmt.Errorf("failed to update collaboration group chat: %w", err)
+			}
 		}
 		targetGroupChat = groupChat
 		var gmInitiator model.GroupChatMember
 		if err := tx.Where("group_chat_id = ? AND user_id = ?", groupChat.ID, initiatorID).First(&gmInitiator).Error; err != nil {
-			tx.Create(&model.GroupChatMember{
+			if err := tx.Create(&model.GroupChatMember{
 				GroupChatID: groupChat.ID,
 				UserID:      initiatorID,
 				Role:        "Initiator",
-			})
+			}).Error; err != nil {
+				return fmt.Errorf("failed to add initiator to collaboration group: %w", err)
+			}
 		}
 
 		var gmApplicant model.GroupChatMember
 		if err := tx.Where("group_chat_id = ? AND user_id = ?", groupChat.ID, collabReq.ApplicantID).First(&gmApplicant).Error; err != nil {
-			tx.Create(&model.GroupChatMember{
+			if err := tx.Create(&model.GroupChatMember{
 				GroupChatID: groupChat.ID,
 				UserID:      collabReq.ApplicantID,
 				Role:        "Collaboration Partner",
-			})
+			}).Error; err != nil {
+				return fmt.Errorf("failed to add applicant to collaboration group: %w", err)
+			}
 		}
 		sysMessage := model.GroupMessage{
 			GroupChatID:     groupChat.ID,
@@ -450,7 +462,7 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 			Content:         welcomeMsg,
 		}
 		if err := tx.Create(&sysMessage).Error; err != nil {
-			return err
+			return fmt.Errorf("failed to create collaboration system message: %w", err)
 		}
 		notif := model.Notification{
 			UserID:       collabReq.ApplicantID,
@@ -461,7 +473,7 @@ func (r *pgProjectRepository) ApproveCollabRequest(requestID, initiatorID uuid.U
 			Payload:      fmt.Sprintf(`{"title":"Collaboration Request Approved","message":"Your collaboration request has been approved by the initiator.","projectId":"%s","groupChatId":"%s"}`, proj.ID, groupChat.ID),
 		}
 		if err := tx.Create(&notif).Error; err != nil {
-			return err
+			return fmt.Errorf("failed to create collaboration notification: %w", err)
 		}
 
 		return nil
@@ -483,7 +495,7 @@ func (r *pgProjectRepository) RejectCollabRequest(requestID, initiatorID uuid.UU
 		return nil, err
 	}
 
-	if collabReq.Status != "PENDING" {
+	if !strings.EqualFold(strings.TrimSpace(collabReq.Status), constant.CollabStatusPending) {
 		return nil, errors.New("collaboration request has already been processed")
 	}
 	var isAuthorized bool
@@ -546,7 +558,7 @@ func (r *pgProjectRepository) WithdrawCollabRequest(requestID, applicantID uuid.
 	if request.ApplicantID != applicantID {
 		return errors.New("only the applicant can withdraw this collaboration request")
 	}
-	if request.Status != constant.CollabStatusPending && request.Status != constant.CollabStatusAccepted {
+	if !strings.EqualFold(strings.TrimSpace(request.Status), constant.CollabStatusPending) && !strings.EqualFold(strings.TrimSpace(request.Status), constant.CollabStatusAccepted) {
 		return errors.New("collaboration request cannot be withdrawn")
 	}
 

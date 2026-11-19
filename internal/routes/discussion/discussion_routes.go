@@ -1,14 +1,16 @@
 package discussionroutes
 
 import (
+	"nalakarsa/internal/config"
 	"nalakarsa/internal/handler/discussion"
+	"nalakarsa/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *discussionhandler.DiscussionHandler) {
+func RegisterRoutes(public *gin.RouterGroup, protected *gin.RouterGroup, h *discussionhandler.DiscussionHandler, cfg *config.Config) {
 	discussions := public.Group("/discussions")
-	discussions.GET("", h.List)
+	discussions.GET("", middleware.OptionalAuthMiddleware(cfg), h.List)
 	discussions.GET("/:id", h.GetByID)
 	discussions.GET("/:id/replies", h.GetReplies)
 	discussions.GET("/:id/collaboration", h.GetByID)

@@ -18,7 +18,7 @@ import (
 type DiscussionService interface {
 	Create(userID uuid.UUID, req dto.CreateDiscussionRequest) (uuid.UUID, error)
 	GetByID(id uuid.UUID, currentUserID *uuid.UUID) (*dto.DiscussionDetailResponse, error)
-	List(search, category, role, sort string, page, limit int, currentUserID *uuid.UUID) ([]dto.DiscussionResponse, int64, error)
+	List(search, category, role, sort string, page, limit int, currentUserID *uuid.UUID, ownerID *uuid.UUID) ([]dto.DiscussionResponse, int64, error)
 	Update(userID uuid.UUID, id uuid.UUID, req dto.UpdateDiscussionRequest) error
 	Delete(userID uuid.UUID, id uuid.UUID) error
 	AddReply(userID uuid.UUID, discussionID uuid.UUID, req dto.CreateReplyRequest) (*dto.DiscussionReplyResponse, error)
@@ -182,8 +182,8 @@ func (s *discussionService) ListReplies(discussionID uuid.UUID, page, limit int)
 	}, total, nil
 }
 
-func (s *discussionService) List(search, category, role, sort string, page, limit int, currentUserID *uuid.UUID) ([]dto.DiscussionResponse, int64, error) {
-	discs, total, err := s.discRepo.List(search, category, role, sort, page, limit)
+func (s *discussionService) List(search, category, role, sort string, page, limit int, currentUserID *uuid.UUID, ownerID *uuid.UUID) ([]dto.DiscussionResponse, int64, error) {
+	discs, total, err := s.discRepo.List(search, category, role, sort, page, limit, ownerID)
 	if err != nil {
 		return nil, 0, err
 	}

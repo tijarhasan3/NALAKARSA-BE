@@ -183,7 +183,7 @@ func main() {
 	authroutes.RegisterRoutes(v1, protected, authHandler)
 	assetroutes.RegisterRoutes(protected, assetHandler)
 	userroutes.RegisterRoutes(v1, protected, userHandler, connHandler.GetSuggestions)
-	discussionroutes.RegisterRoutes(v1, protected, discHandler)
+	discussionroutes.RegisterRoutes(v1, protected, discHandler, cfg)
 	expertiseroutes.RegisterRoutes(v1, expertiseHandler)
 	skillroutes.RegisterRoutes(v1, protected, skillHandler)
 	connectionroutes.RegisterRoutes(protected, connHandler)

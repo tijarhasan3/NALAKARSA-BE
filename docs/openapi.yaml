@@ -1236,7 +1236,10 @@ paths:
     get:
       tags: [Discussions]
       summary: Daftar Diskusi
-      description: Mengambil seluruh topik diskusi publik dengan pagination, pencarian teks, dan filter.
+      description: Mengambil topik diskusi dengan pagination, pencarian, filter, sorting, dan opsi hanya milik user yang sedang login. Tanpa scope atau dengan scope=all, endpoint tetap publik. scope=my_topics membutuhkan Bearer token.
+      security:
+        - {}
+        - BearerAuth: []
       parameters:
         - name: search
           in: query
@@ -1258,14 +1261,31 @@ paths:
             type: string
         - name: sort
           in: query
-          description: Urutan data (newest, oldest)
+          description: Urutan data (newest, oldest, popular)
           required: false
           schema:
             type: string
             default: newest
+            enum: [newest, oldest, popular]
+        - name: scope
+          in: query
+          description: Gunakan my_topics untuk hanya mengambil diskusi milik user dari JWT; all atau kosong untuk semua diskusi.
+          required: false
+          schema:
+            type: string
+            enum: [all, my_topics]
+            default: all
+        - name: mine
+          in: query
+          description: Alias kompatibilitas; gunakan true untuk hanya mengambil diskusi milik user dari JWT.
+          required: false
+          schema:
+            type: boolean
       responses:
         '200':
           description: Daftar topik diskusi berhasil dimuat
+        '401':
+          description: Token wajib atau tidak valid saat scope=my_topics
     post:
       tags: [Discussions]
       summary: Buat Topik Diskusi

@@ -2,6 +2,7 @@ package discussionhandler
 
 import (
 	"net/http"
+	"strings"
 
 	"nalakarsa/internal/dto"
 	discussionservice "nalakarsa/internal/service/discussion"
@@ -118,11 +119,20 @@ func (h *DiscussionHandler) List(c *gin.Context) {
 	category := c.Query("category")
 	role := c.Query("role")
 	sort := c.Query("sort")
+	scope := strings.ToLower(strings.TrimSpace(c.Query("scope")))
 	page, limit := utils.ParsePaginationRequest(c)
 
 	currentUserID := getCurrentUserID(c)
+	var ownerID *uuid.UUID
+	if isMyTopicsScope(scope, c.Query("mine")) {
+		if currentUserID == nil {
+			utils.ErrorJSONResponseWithMessage(c, http.StatusUnauthorized, "Authentication is required for scope=my_topics")
+			return
+		}
+		ownerID = currentUserID
+	}
 
-	discs, total, err := h.discService.List(search, category, role, sort, page, limit, currentUserID)
+	discs, total, err := h.discService.List(search, category, role, sort, page, limit, currentUserID, ownerID)
 	if err != nil {
 		utils.ErrorJSONResponseWithMessage(c, http.StatusInternalServerError, err.Error())
 		return
@@ -141,6 +151,10 @@ func (h *DiscussionHandler) List(c *gin.Context) {
 	}
 
 	utils.JSONResponse(c, http.StatusOK, "Discussions list retrieved successfully", discs, pagination)
+}
+
+func isMyTopicsScope(scope, mine string) bool {
+	return scope == "my_topics" || scope == "mine" || strings.EqualFold(strings.TrimSpace(mine), "true")
 }
 
 func (h *DiscussionHandler) Update(c *gin.Context) {

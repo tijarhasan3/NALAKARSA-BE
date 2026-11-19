@@ -13,7 +13,7 @@ import (
 type DiscussionRepository interface {
 	Create(disc *model.Discussion) error
 	GetByID(id uuid.UUID) (*model.Discussion, error)
-	List(search, category, role, sort string, page, limit int) ([]model.Discussion, int64, error)
+	List(search, category, role, sort string, page, limit int, ownerID *uuid.UUID) ([]model.Discussion, int64, error)
 	Update(disc *model.Discussion) error
 	Delete(id uuid.UUID) error
 	CreateReply(reply *model.DiscussionReply) error
@@ -56,7 +56,7 @@ func (r *pgDiscussionRepository) GetByID(id uuid.UUID) (*model.Discussion, error
 	return &disc, nil
 }
 
-func (r *pgDiscussionRepository) List(search, category, role, sort string, page, limit int) ([]model.Discussion, int64, error) {
+func (r *pgDiscussionRepository) List(search, category, role, sort string, page, limit int, ownerID *uuid.UUID) ([]model.Discussion, int64, error) {
 	var discussions []model.Discussion
 	var total int64
 
@@ -64,6 +64,9 @@ func (r *pgDiscussionRepository) List(search, category, role, sort string, page,
 
 	if category != "" {
 		query = query.Where("discussions.category = ?", category)
+	}
+	if ownerID != nil {
+		query = query.Where("discussions.user_id = ?", *ownerID)
 	}
 
 	if role != "" {

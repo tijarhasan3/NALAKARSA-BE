@@ -44,3 +44,33 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		c.Next()
 	})
 }
+
+// OptionalAuthMiddleware loads a valid bearer token when one is provided,
+// while keeping the route public when no token is sent.
+func OptionalAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+	return gin.HandlerFunc(func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.Next()
+			return
+		}
+
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			utils.ErrorJSONResponseWithMessage(c, http.StatusUnauthorized, "Authorization header format must be Bearer <token>")
+			c.Abort()
+			return
+		}
+
+		claims, err := utils.ValidateToken(parts[1], cfg.JWTSecret)
+		if err != nil {
+			utils.ErrorJSONResponseWithMessage(c, http.StatusUnauthorized, "Invalid or expired access token")
+			c.Abort()
+			return
+		}
+		c.Set("user_id", claims.UserID)
+		c.Set("email", claims.Email)
+		c.Set("role", claims.Role)
+		c.Next()
+	})
+}

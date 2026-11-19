@@ -122,7 +122,8 @@ type DiscussionCreator struct {
 	PrefixTitle string    `json:"prefixTitle"`
 	SuffixTitle string    `json:"suffixTitle"`
 	Role        string    `json:"role"`
-	AvatarURL   string    `json:"avatar_url"`
+	AvatarURL   string    `json:"avatarUrl"`
+	AvatarUrl   string    `json:"-"`
 }
 
 type DiscussionReplyResponse struct {
@@ -167,7 +168,8 @@ type DiscussionResponse struct {
 	PrefixTitle            string     `json:"prefixTitle"`
 	SuffixTitle            string     `json:"suffixTitle"`
 	Role                   string     `json:"role"`
-	AvatarURL              string     `json:"avatar_url"`
+	AvatarURL              string     `json:"avatarUrl"`
+	AvatarUrl              string     `json:"-"`
 	SourceDiscussionID     *uuid.UUID `json:"sourceDiscussionId"`
 }
 
@@ -198,7 +200,8 @@ type DiscussionDetailResponse struct {
 	PrefixTitle            string                    `json:"prefixTitle"`
 	SuffixTitle            string                    `json:"suffixTitle"`
 	Role                   string                    `json:"role"`
-	AvatarURL              string                    `json:"avatar_url"`
+	AvatarURL              string                    `json:"avatarUrl"`
+	AvatarUrl              string                    `json:"-"`
 	SourceDiscussionID     *uuid.UUID                `json:"sourceDiscussionId"`
 	Creator                DiscussionCreator         `json:"creator"`
 	RepliesList            []DiscussionReplyResponse `json:"repliesList"`

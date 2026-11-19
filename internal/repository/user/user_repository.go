@@ -2,6 +2,7 @@ package userrepository
 
 import (
 	"errors"
+	"net/url"
 	"strings"
 	"time"
 
@@ -101,6 +102,9 @@ func (r *pgUserRepository) GetByIDOrIdentifier(identifier string) (*model.User, 
 	if trimmed == "" {
 		return nil, nil
 	}
+	if decoded, err := url.PathUnescape(trimmed); err == nil {
+		trimmed = strings.TrimSpace(decoded)
+	}
 
 	trimmedClean := strings.TrimPrefix(trimmed, "user_")
 	if uid, err := uuid.Parse(trimmedClean); err == nil {
@@ -111,6 +115,14 @@ func (r *pgUserRepository) GetByIDOrIdentifier(identifier string) (*model.User, 
 	}
 	var u model.User
 	err := r.db.Where("LOWER(TRIM(full_name)) = LOWER(TRIM(?))", trimmedClean).First(&u).Error
+	if err == nil {
+		return &u, nil
+	}
+
+	// FE may use the formatted display name, including prefix and suffix title,
+	// while the database stores those values in separate columns.
+	displayName := "LOWER(TRIM(CONCAT_WS(' ', NULLIF(TRIM(prefix_title), ''), TRIM(full_name)) || CASE WHEN TRIM(suffix_title) <> '' THEN ', ' || TRIM(suffix_title) ELSE '' END))"
+	err = r.db.Where(displayName+" = LOWER(TRIM(?))", trimmedClean).First(&u).Error
 	if err == nil {
 		return &u, nil
 	}

@@ -319,8 +319,7 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	log.Printf("[AVATAR UPLOAD SUCCESS] User %s avatar set to %s", userID, secureURL)
 
 	utils.JSONResponse(c, http.StatusOK, "Avatar uploaded successfully", gin.H{
-		"avatar_url": secureURL,
-		"avatarUrl":  secureURL,
+		"avatarUrl": secureURL,
 	}, nil)
 }
 

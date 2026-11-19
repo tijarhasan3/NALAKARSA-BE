@@ -2,6 +2,7 @@ package discussionrepository
 
 import (
 	"errors"
+	"strings"
 
 	"nalakarsa/internal/model"
 
@@ -77,10 +78,7 @@ func (r *pgDiscussionRepository) List(search, category, role, sort string, page,
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	order := "discussions.created_at desc"
-	if sort == "oldest" {
-		order = "discussions.created_at asc"
-	}
+	order := discussionOrder(sort) + ", discussions.created_at desc"
 	offset := (page - 1) * limit
 	err := query.Limit(limit).Offset(offset).Order(order).Find(&discussions).Error
 	if err != nil {
@@ -88,6 +86,17 @@ func (r *pgDiscussionRepository) List(search, category, role, sort string, page,
 	}
 
 	return discussions, total, nil
+}
+
+func discussionOrder(sort string) string {
+	switch strings.ToLower(strings.TrimSpace(sort)) {
+	case "oldest":
+		return "discussions.created_at asc"
+	case "popular":
+		return "discussions.upvote_count desc"
+	default:
+		return "discussions.created_at desc"
+	}
 }
 
 func (r *pgDiscussionRepository) Update(disc *model.Discussion) error {

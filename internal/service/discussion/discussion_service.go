@@ -2,6 +2,7 @@ package discussionservice
 
 import (
 	"errors"
+	"net/url"
 	"strings"
 
 	"nalakarsa/internal/config"
@@ -50,6 +51,17 @@ func splitTags(value string) []string {
 
 func (s *discussionService) mediaURL(value string) string {
 	return utils.NormalizeSupabaseStorageURL(value, s.cfg)
+}
+
+func discussionAvatarURL(user model.User) string {
+	if avatar := strings.TrimSpace(user.AvatarURL); avatar != "" {
+		return avatar
+	}
+	seed := user.FullName
+	if strings.TrimSpace(seed) == "" {
+		seed = user.ID.String()
+	}
+	return "https://api.dicebear.com/9.x/initials/svg?seed=" + url.QueryEscape(seed)
 }
 
 func (s *discussionService) Create(userID uuid.UUID, req dto.CreateDiscussionRequest) (uuid.UUID, error) {
@@ -117,7 +129,8 @@ func (s *discussionService) GetByID(id uuid.UUID, currentUserID *uuid.UUID) (*dt
 		PrefixTitle:            disc.User.PrefixTitle,
 		SuffixTitle:            disc.User.SuffixTitle,
 		Role:                   disc.User.Role,
-		AvatarURL:              disc.User.AvatarURL,
+		AvatarURL:              discussionAvatarURL(disc.User),
+		AvatarUrl:              discussionAvatarURL(disc.User),
 		SourceDiscussionID:     disc.SourceDiscussionID,
 		Creator: dto.DiscussionCreator{
 			ID:          disc.User.ID,
@@ -125,7 +138,8 @@ func (s *discussionService) GetByID(id uuid.UUID, currentUserID *uuid.UUID) (*dt
 			PrefixTitle: disc.User.PrefixTitle,
 			SuffixTitle: disc.User.SuffixTitle,
 			Role:        disc.User.Role,
-			AvatarURL:   disc.User.AvatarURL,
+			AvatarURL:   discussionAvatarURL(disc.User),
+			AvatarUrl:   discussionAvatarURL(disc.User),
 		},
 		RepliesList: s.toDiscussionReplyResponses(disc.Replies),
 	}, nil
@@ -209,7 +223,8 @@ func (s *discussionService) List(search, category, role, sort string, page, limi
 			PrefixTitle:            d.User.PrefixTitle,
 			SuffixTitle:            d.User.SuffixTitle,
 			Role:                   d.User.Role,
-			AvatarURL:              d.User.AvatarURL,
+			AvatarURL:              discussionAvatarURL(d.User),
+			AvatarUrl:              discussionAvatarURL(d.User),
 			SourceDiscussionID:     d.SourceDiscussionID,
 		}
 	}
@@ -297,7 +312,8 @@ func (s *discussionService) AddReply(userID uuid.UUID, discussionID uuid.UUID, r
 			PrefixTitle: u.PrefixTitle,
 			SuffixTitle: u.SuffixTitle,
 			Role:        u.Role,
-			AvatarURL:   u.AvatarURL,
+			AvatarURL:   discussionAvatarURL(*u),
+			AvatarUrl:   discussionAvatarURL(*u),
 		},
 	}, nil
 }
@@ -333,7 +349,8 @@ func (s *discussionService) toDiscussionReplyResponse(r model.DiscussionReply) d
 			PrefixTitle: r.User.PrefixTitle,
 			SuffixTitle: r.User.SuffixTitle,
 			Role:        r.User.Role,
-			AvatarURL:   r.User.AvatarURL,
+			AvatarURL:   discussionAvatarURL(r.User),
+			AvatarUrl:   discussionAvatarURL(r.User),
 		},
 	}
 }

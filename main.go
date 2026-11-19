@@ -90,6 +90,7 @@ import (
 
 func main() {
 	seedFlag := flag.Bool("seed", false, "run database seeder and exit")
+	seedDiscussionFlag := flag.Bool("seed-discussions", false, "append discussion demo data without deleting existing data")
 	flag.Parse()
 
 	log.Println("Starting Nalakarsa Backend API Server...")
@@ -113,6 +114,13 @@ func main() {
 		log.Println("Database seeding completed. Exiting application...")
 		return
 	}
+	if *seedDiscussionFlag {
+		if err := seed.SeedDiscussionData(db); err != nil {
+			log.Fatalf("Critical Error: Discussion seed failed: %v", err)
+		}
+		log.Println("Discussion data seeding completed. Existing data was preserved. Exiting application...")
+		return
+	}
 	database.StartRefreshTokenCleanup(db)
 	userRepo := userrepository.NewUserRepository(db)
 	discRepo := discussionrepository.NewDiscussionRepository(db)
@@ -131,7 +139,7 @@ func main() {
 	industryRepo := industryrepository.NewIndustryRepository(db)
 	knowledgeRepo := knowledgerepository.NewKnowledgeRepository(db)
 	authService := authservice.NewAuthService(userRepo, cfg)
-	userService := userservice.NewUserService(userRepo, connRepo, projRepo, notifRepo)
+	userService := userservice.NewUserService(userRepo, connRepo, projRepo, notifRepo, cfg)
 	discService := discussionservice.NewDiscussionService(discRepo, userRepo, cfg)
 	expertiseService := expertiseservice.NewExpertiseService(expertiseRepo)
 	skillService := skillservice.NewSkillService(skillRepo)
@@ -149,7 +157,7 @@ func main() {
 	industryService := industryservice.NewIndustryService(industryRepo)
 	knowledgeService := knowledgeservice.NewKnowledgeService(knowledgeRepo)
 	authHandler := authhandler.NewAuthHandler(authService)
-	assetHandler := assethandler.NewAssetHandler(cfg)
+	assetHandler := assethandler.NewAssetHandler(cfg, userRepo)
 	userHandler := userhandler.NewUserHandler(userService, cfg)
 	discHandler := discussionhandler.NewDiscussionHandler(discService)
 	expertiseHandler := expertisehandler.NewExpertiseHandler(expertiseService)

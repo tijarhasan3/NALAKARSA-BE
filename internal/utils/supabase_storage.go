@@ -34,6 +34,11 @@ type supabaseSignedURL struct {
 	SignedURL string `json:"signedURL"`
 }
 
+type supabaseStorageObject struct {
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
 // NormalizeSupabaseStorageURL converts Storage API relative URLs into URLs
 // that can be used directly by a browser.
 func NormalizeSupabaseStorageURL(raw string, cfg *config.Config) string {
@@ -55,6 +60,85 @@ func NormalizeSupabaseStorageURL(raw string, cfg *config.Config) string {
 		return base + "/storage/v1/" + raw
 	}
 	return raw
+}
+
+func NormalizeSupabasePublicURL(raw, bucket string, cfg *config.Config) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || bucket == "" || cfg == nil || cfg.SupabaseURL == "" {
+		return raw
+	}
+	if parsed, err := url.Parse(raw); err == nil && parsed.IsAbs() {
+		return raw
+	}
+	base := strings.TrimRight(cfg.SupabaseURL, "/")
+	if strings.HasPrefix(raw, "/storage/v1/") {
+		return base + raw
+	}
+	if strings.HasPrefix(raw, "/object/") {
+		return base + "/storage/v1" + raw
+	}
+	prefix := "/" + strings.Trim(bucket, "/") + "/"
+	if strings.HasPrefix(raw, prefix) {
+		return base + "/storage/v1/object/public/" + strings.Trim(bucket, "/") + "/" + strings.TrimPrefix(raw, prefix)
+	}
+	if strings.HasPrefix(raw, "/users/") || strings.HasPrefix(raw, "users/") {
+		return base + "/storage/v1/object/public/" + strings.Trim(bucket, "/") + "/" + strings.TrimPrefix(raw, "/")
+	}
+	return raw
+}
+
+// FindLatestPublicObjectURL finds the newest object below prefix and returns
+// its public URL. It is used to recover files uploaded before their URL was
+// persisted in the application database.
+func FindLatestPublicObjectURL(prefix, bucket string, cfg *config.Config) (string, error) {
+	if cfg == nil || cfg.SupabaseURL == "" || cfg.SupabaseServiceRoleKey == "" || bucket == "" {
+		return "", errors.New("supabase storage is not configured")
+	}
+
+	prefix = strings.Trim(prefix, "/")
+	payload, err := json.Marshal(map[string]interface{}{
+		"prefix": prefix,
+		"limit":  1,
+		"offset": 0,
+		"sortBy": map[string]string{"column": "created_at", "order": "desc"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to encode storage list request: %w", err)
+	}
+
+	endpoint := fmt.Sprintf("%s/storage/v1/object/list/%s", strings.TrimRight(cfg.SupabaseURL, "/"), bucket)
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+cfg.SupabaseServiceRoleKey)
+	req.Header.Set("apikey", cfg.SupabaseServiceRoleKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to list supabase storage objects: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusBadRequest {
+		return "", fmt.Errorf("supabase storage list error (%d): %s", resp.StatusCode, bytes.TrimSpace(body))
+	}
+
+	var objects []supabaseStorageObject
+	if err := json.Unmarshal(body, &objects); err != nil {
+		return "", fmt.Errorf("failed to parse supabase storage list response: %w", err)
+	}
+	if len(objects) == 0 || strings.TrimSpace(objects[0].Name) == "" {
+		return "", nil
+	}
+
+	objectPath := strings.Trim(objects[0].Name, "/")
+	if prefix != "" && objectPath != prefix && !strings.HasPrefix(objectPath, prefix+"/") {
+		objectPath = prefix + "/" + objectPath
+	}
+	return NormalizeSupabasePublicURL(objectPath, bucket, cfg), nil
 }
 
 func parseSupabaseSignedURL(body []byte) (string, error) {

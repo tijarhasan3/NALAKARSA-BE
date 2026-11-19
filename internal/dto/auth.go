@@ -34,6 +34,13 @@ type AuthData struct {
 	User         UserResponse `json:"user"`
 }
 
+// RegisterResponse intentionally excludes access and refresh tokens from the
+// HTTP registration response. The existing service flow still creates them
+// internally for compatibility with the current authentication lifecycle.
+type RegisterResponse struct {
+	User UserResponse `json:"user"`
+}
+
 type AuthRequestContext struct {
 	DeviceInfo string
 	IPAddress  string

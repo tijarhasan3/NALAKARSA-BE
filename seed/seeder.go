@@ -1,6 +1,7 @@
 package seed
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -44,61 +45,65 @@ func SeedData(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+	verifiedAt := time.Now().UTC()
 	akademisiUser := &model.User{
-		Email:        "dosen@nalakarsa.id",
-		PasswordHash: hashedPassword,
-		Role:         constant.RoleAkademisi,
-		SystemRole:   constant.SystemRoleUser,
-		Status:       constant.StatusActive,
-		FirstName:    "Budi",
-		LastName:     "Santoso",
-		FullName:     "Dr. Ir. Budi Santoso",
-		PrefixTitle:  "Dr. Ir.",
-		SuffixTitle:  "",
-		Affiliation:  "Universitas Indonesia",
-		Location:     "Jakarta",
-		Expertise:    "Kecerdasan Buatan, Machine Learning",
-		Bio:          "Peneliti bidang IoT.",
-		Mission:      "Melakukan penelitian terapan dan mencari mitra industrialisasi.",
-		AvatarURL:    "https://api.dicebear.com/7.x/adventurer/svg?seed=budi",
+		Email:           "dosen@nalakarsa.id",
+		PasswordHash:    hashedPassword,
+		Role:            constant.RoleAkademisi,
+		SystemRole:      constant.SystemRoleUser,
+		Status:          constant.StatusActive,
+		FirstName:       "Budi",
+		LastName:        "Santoso",
+		FullName:        "Dr. Ir. Budi Santoso",
+		PrefixTitle:     "Dr. Ir.",
+		SuffixTitle:     "",
+		Affiliation:     "Universitas Indonesia",
+		Location:        "Jakarta",
+		Expertise:       "Kecerdasan Buatan, Machine Learning",
+		Bio:             "Peneliti bidang IoT.",
+		Mission:         "Melakukan penelitian terapan dan mencari mitra industrialisasi.",
+		AvatarURL:       "https://api.dicebear.com/7.x/adventurer/svg?seed=budi",
+		EmailVerifiedAt: &verifiedAt,
 	}
 
 	praktisiUser := &model.User{
-		Email:        "pengusaha@nalakarsa.id",
-		PasswordHash: hashedPassword,
-		Role:         constant.RolePraktisi,
-		SystemRole:   constant.SystemRoleUser,
-		Status:       constant.StatusActive,
-		FirstName:    "Setyo",
-		LastName:     "Nugroho",
-		FullName:     "Setyo Nugroho",
-		PrefixTitle:  "",
-		SuffixTitle:  "",
-		Affiliation:  "PT Telkom Indonesia",
-		Location:     "Surabaya",
-		Expertise:    "Data Science, Big Data Analytics",
-		Bio:          "Pengusaha pertanian digital.",
-		Mission:      "Mendukung otomatisasi pertanian menggunakan teknologi hasil riset.",
-		AvatarURL:    "https://api.dicebear.com/7.x/adventurer/svg?seed=hendra",
+		Email:           "pengusaha@nalakarsa.id",
+		PasswordHash:    hashedPassword,
+		Role:            constant.RolePraktisi,
+		SystemRole:      constant.SystemRoleUser,
+		Status:          constant.StatusActive,
+		FirstName:       "Setyo",
+		LastName:        "Nugroho",
+		FullName:        "Setyo Nugroho",
+		PrefixTitle:     "",
+		SuffixTitle:     "",
+		Affiliation:     "PT Telkom Indonesia",
+		Location:        "Surabaya",
+		Expertise:       "Data Science, Big Data Analytics",
+		Bio:             "Pengusaha pertanian digital.",
+		Mission:         "Mendukung otomatisasi pertanian menggunakan teknologi hasil riset.",
+		AvatarURL:       "https://api.dicebear.com/7.x/adventurer/svg?seed=hendra",
+		EmailVerifiedAt: &verifiedAt,
 	}
 
 	profesionalUser := &model.User{
-		Email:        "engineer@nalakarsa.id",
-		PasswordHash: hashedPassword,
-		Role:         constant.RoleProfesional,
-		SystemRole:   constant.SystemRoleUser,
-		Status:       constant.StatusActive,
-		FirstName:    "Hendra",
-		LastName:     "Wijaya",
-		FullName:     "Hendra Wijaya",
-		PrefixTitle:  "",
-		SuffixTitle:  "",
-		Affiliation:  "Tech Startup Indonesia",
-		Location:     "Bandung",
-		Expertise:    "Software Engineering, Cloud Architecture",
-		Bio:          "Software Engineer spesialis backend.",
-		Mission:      "Menyediakan solusi backend handal skala besar.",
-		AvatarURL:    "https://api.dicebear.com/7.x/adventurer/svg?seed=setyo",
+		Email:           "engineer@nalakarsa.id",
+		PasswordHash:    hashedPassword,
+		Role:            constant.RoleProfesional,
+		SystemRole:      constant.SystemRoleUser,
+		Status:          constant.StatusActive,
+		FirstName:       "Hendra",
+		LastName:        "Wijaya",
+		FullName:        "Hendra Wijaya",
+		PrefixTitle:     "",
+		SuffixTitle:     "",
+		Affiliation:     "Tech Startup Indonesia",
+		Location:        "Bandung",
+		Expertise:       "Software Engineering, Cloud Architecture",
+		Bio:             "Software Engineer spesialis backend.",
+		Mission:         "Menyediakan solusi backend handal skala besar.",
+		AvatarURL:       "https://api.dicebear.com/7.x/adventurer/svg?seed=setyo",
+		EmailVerifiedAt: &verifiedAt,
 	}
 
 	if err := db.Create(akademisiUser).Error; err != nil {
@@ -110,33 +115,51 @@ func SeedData(db *gorm.DB) error {
 	if err := db.Create(profesionalUser).Error; err != nil {
 		return err
 	}
+
+	discussionUsers := []*model.User{
+		{
+			Email: "peneliti01@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RoleAkademisi, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Rina", LastName: "Kusuma", FullName: "Rina Kusuma", Affiliation: "Institut Teknologi Bandung", Location: "Bandung", Expertise: "Energi Terbarukan, IoT", Bio: "Peneliti energi terbarukan dan sistem monitoring.", Mission: "Mendorong pemanfaatan teknologi untuk transisi energi.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=rina", EmailVerifiedAt: &verifiedAt,
+		},
+		{
+			Email: "peneliti02@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RoleAkademisi, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Dimas", LastName: "Pratama", FullName: "Dimas Pratama", Affiliation: "Universitas Gadjah Mada", Location: "Yogyakarta", Expertise: "Pendidikan Digital, NLP", Bio: "Dosen yang mengembangkan pembelajaran berbasis data.", Mission: "Membuat pendidikan lebih adaptif dan inklusif.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=dimas", EmailVerifiedAt: &verifiedAt,
+		},
+		{
+			Email: "praktisi01@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RolePraktisi, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Lestari", LastName: "Wulandari", FullName: "Lestari Wulandari", Affiliation: "AgriTech Nusantara", Location: "Bogor", Expertise: "Agrikultur, Supply Chain", Bio: "Praktisi agribisnis yang fokus pada efisiensi rantai pasok.", Mission: "Menghubungkan inovasi pertanian dengan kebutuhan petani.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=lestari", EmailVerifiedAt: &verifiedAt,
+		},
+		{
+			Email: "praktisi02@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RolePraktisi, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Bagas", LastName: "Ramadhan", FullName: "Bagas Ramadhan", Affiliation: "Manufaktur Maju", Location: "Bekasi", Expertise: "Manufaktur, Otomasi", Bio: "Manajer inovasi di sektor manufaktur.", Mission: "Meningkatkan produktivitas industri melalui otomasi.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=bagas", EmailVerifiedAt: &verifiedAt,
+		},
+		{
+			Email: "profesional01@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RoleProfesional, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Nadia", LastName: "Permata", FullName: "Nadia Permata", Affiliation: "Data Insight Lab", Location: "Jakarta", Expertise: "Data Engineering, Analytics", Bio: "Data engineer yang membantu organisasi mengambil keputusan berbasis data.", Mission: "Membangun fondasi data yang mudah digunakan dan terpercaya.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=nadia", EmailVerifiedAt: &verifiedAt,
+		},
+		{
+			Email: "profesional02@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RoleProfesional, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Yoga", LastName: "Mahendra", FullName: "Yoga Mahendra", Affiliation: "Cloudworks Indonesia", Location: "Surabaya", Expertise: "Cloud Computing, DevOps", Bio: "Cloud architect untuk platform yang aman dan skalabel.", Mission: "Membantu tim membangun layanan digital yang tangguh.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=yoga", EmailVerifiedAt: &verifiedAt,
+		},
+		{
+			Email: "profesional03@nalakarsa.id", PasswordHash: hashedPassword, Role: constant.RoleProfesional, SystemRole: constant.SystemRoleUser, Status: constant.StatusActive,
+			FirstName: "Salsa", LastName: "Anindita", FullName: "Salsa Anindita", Affiliation: "HealthTech Indonesia", Location: "Semarang", Expertise: "Teknologi Kesehatan, Product Design", Bio: "Product specialist untuk solusi kesehatan digital.", Mission: "Membuat layanan kesehatan lebih mudah dijangkau.", AvatarURL: "https://api.dicebear.com/7.x/adventurer/svg?seed=salsa", EmailVerifiedAt: &verifiedAt,
+		},
+	}
+	for _, user := range discussionUsers {
+		if err := db.Create(user).Error; err != nil {
+			return err
+		}
+	}
+	authors := append([]*model.User{akademisiUser, praktisiUser, profesionalUser}, discussionUsers...)
 	if err := seedPublications(db, akademisiUser, praktisiUser, profesionalUser); err != nil {
 		return err
 	}
-	disc1 := &model.Discussion{
-		UserID:      profesionalUser.ID,
-		Title:       "Mengapa Golang Sangat Cocok untuk Microservices?",
-		Description: "Dalam ekosistem Nalakarsa, saya ingin berdiskusi mengenai konkurensi di Go. Goroutines dan Channels membuat pemrosesan paralel menjadi sangat efisien dibandingkan thread konvensional. Bagaimana pengalaman rekan-rekan?",
-		Category:    "Tech",
-		Tags:        "golang,microservices,backend",
-		Status:      "open",
-	}
-
-	disc2 := &model.Discussion{
-		UserID:      akademisiUser.ID,
-		Title:       "Hilirisasi Hasil Riset Universitas ke Sektor Industri",
-		Description: "Banyak prototipe riset IoT terhenti di laci laboratorium. Kendala utama adalah kurangnya komunikasi dengan pelaku bisnis. Mari kita bahas bagaimana menjembatani gap ini.",
-		Category:    "Research",
-		Tags:        "riset,industri,hilirisasi",
-		Status:      "open",
-	}
-
-	if err := db.Create(disc1).Error; err != nil {
+	discussions, err := seedDiscussions(db, authors)
+	if err != nil {
 		return err
 	}
-	if err := db.Create(disc2).Error; err != nil {
-		return err
-	}
+	disc1, disc2 := discussions[0], discussions[1]
 	reply1 := &model.DiscussionReply{
 		DiscussionID: disc1.ID,
 		UserID:       akademisiUser.ID,
@@ -367,6 +390,41 @@ func SeedData(db *gorm.DB) error {
 
 	log.Println("Mock data seeding successfully completed.")
 	return nil
+}
+
+func seedDiscussions(db *gorm.DB, authors []*model.User) ([]*model.Discussion, error) {
+	definitions := []struct {
+		title, description, background, objective, expectedOutput, category, tags string
+	}{
+		{"Mengapa Golang Sangat Cocok untuk Microservices?", "Diskusi tentang konkurensi, goroutines, dan channels untuk layanan backend yang efisien.", "Tim membutuhkan arsitektur layanan yang ringan dan mudah dikembangkan.", "Membandingkan praktik terbaik microservices berbasis Go.", "Rancangan arsitektur microservices", "Teknologi", "golang,microservices,backend"},
+		{"Hilirisasi Hasil Riset Universitas ke Sektor Industri", "Bagaimana menjembatani prototipe riset agar dapat digunakan oleh pelaku industri?", "Banyak prototipe riset berhenti di laboratorium karena kurangnya mitra implementasi.", "Menemukan pola kolaborasi antara kampus dan industri.", "Model kerja sama hilirisasi", "Riset", "riset,industri,hilirisasi"},
+		{"Monitoring Kualitas Tanah Berbasis IoT", "Membahas sensor dan dashboard untuk membantu petani mengambil keputusan berbasis data.", "Petani membutuhkan informasi kondisi tanah yang cepat dan mudah dipahami.", "Merancang pilot project monitoring tanah.", "Proposal uji lapangan sensor", "Pertanian", "iot,pertanian,sensor"},
+		{"Platform Pembelajaran Adaptif untuk Sekolah", "Berbagi pengalaman membangun sistem pembelajaran yang menyesuaikan kebutuhan siswa.", "Materi dan metode belajar perlu menyesuaikan kemampuan setiap siswa.", "Mengidentifikasi data yang aman dan bermanfaat untuk personalisasi belajar.", "Konsep platform pembelajaran adaptif", "Pendidikan", "pendidikan,edutech,data"},
+		{"Interoperabilitas Data Kesehatan Nasional", "Mencari pendekatan untuk menghubungkan data fasilitas kesehatan tanpa mengabaikan privasi pasien.", "Data kesehatan masih tersebar di banyak sistem dengan format berbeda.", "Menyusun prinsip integrasi data kesehatan yang aman.", "Prinsip arsitektur interoperabilitas", "Kesehatan", "kesehatan,interoperabilitas,privasi"},
+		{"Pemanfaatan Energi Surya untuk UMKM", "Mendiskusikan model adopsi panel surya yang terjangkau bagi usaha kecil.", "Biaya energi menjadi salah satu beban operasional UMKM.", "Mengukur kelayakan solusi energi surya untuk UMKM.", "Studi kelayakan awal", "Energi", "energi-surya,umkm,keberlanjutan"},
+		{"Otomasi Proses Produksi yang Terjangkau", "Berbagi strategi memulai otomasi pada pabrik skala menengah.", "Pelaku manufaktur membutuhkan otomasi bertahap dengan investasi terukur.", "Menyusun prioritas proses yang layak diotomasi.", "Roadmap otomasi produksi", "Manufaktur", "manufaktur,otomasi,produktivitas"},
+		{"Analitik Data untuk Rantai Pasok Pangan", "Membahas penggunaan analitik untuk mengurangi pemborosan dan keterlambatan distribusi pangan.", "Perubahan permintaan dan distribusi membuat rantai pasok sulit diprediksi.", "Menentukan indikator analitik yang paling berguna bagi pelaku usaha.", "Daftar indikator supply chain", "Ekonomi", "data-analytics,supply-chain,pangan"},
+		{"Kebijakan Data Terbuka untuk Inovasi Daerah", "Bagaimana pemerintah daerah dapat membuka data tanpa mengorbankan keamanan dan privasi?", "Data publik yang mudah digunakan dapat mempercepat inovasi lokal.", "Menyusun rekomendasi tata kelola data terbuka.", "Draft rekomendasi kebijakan", "Kebijakan Publik", "data-terbuka,kebijakan,inovasi"},
+		{"Kolaborasi Teknologi untuk Kota Berkelanjutan", "Mencari ide kolaborasi lintas bidang untuk mengurangi dampak lingkungan perkotaan.", "Pertumbuhan kota meningkatkan kebutuhan solusi transportasi dan pengelolaan lingkungan.", "Mengumpulkan ide proyek kota berkelanjutan yang dapat diuji.", "Daftar ide pilot project", "Lingkungan", "smart-city,lingkungan,kolaborasi"},
+	}
+
+	if len(authors) < len(definitions) {
+		return nil, fmt.Errorf("discussion seeder requires %d authors, got %d", len(definitions), len(authors))
+	}
+
+	discussions := make([]*model.Discussion, 0, len(definitions))
+	for i, definition := range definitions {
+		discussion := &model.Discussion{
+			UserID: authors[i].ID, Title: definition.title, Description: definition.description,
+			Background: definition.background, Objective: definition.objective, ExpectedOutput: definition.expectedOutput,
+			Category: definition.category, Tags: definition.tags, Status: "open",
+		}
+		if err := db.Create(discussion).Error; err != nil {
+			return nil, err
+		}
+		discussions = append(discussions, discussion)
+	}
+	return discussions, nil
 }
 
 // seedCollaborationRequests creates representative records for the

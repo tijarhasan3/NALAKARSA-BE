@@ -22,7 +22,8 @@ type UserResponse struct {
 	Bio                 string    `json:"bio"`
 	Industry            string    `json:"industry"`
 	Mission             string    `json:"mission"`
-	AvatarURL           string    `json:"avatar_url"`
+	AvatarURL           string    `json:"avatarUrl"`
+	AvatarUrl           string    `json:"-"`
 	EmailVerified       bool      `json:"email_verified"`
 	ViewCount           int64     `json:"view_count"`
 	OnboardingStatus    string    `json:"onboarding_status"`
@@ -66,7 +67,8 @@ type FollowUserItemResponse struct {
 	FullName    string    `json:"fullName"`
 	Role        string    `json:"role"`
 	Affiliation string    `json:"affiliation"`
-	AvatarURL   string    `json:"avatar_url"`
+	AvatarURL   string    `json:"avatarUrl"`
+	AvatarUrl   string    `json:"-"`
 	IsFollowing bool      `json:"isFollowing,omitempty"`
 }
 

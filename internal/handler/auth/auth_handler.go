@@ -33,7 +33,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	utils.JSONResponse(c, http.StatusCreated, "Registration successful", res, nil)
+	// Keep the existing registration flow and internal session creation, but do
+	// not expose access or refresh tokens in the registration response.
+	utils.JSONResponse(c, http.StatusCreated, "Registration successful", dto.RegisterResponse{User: res.User}, nil)
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {

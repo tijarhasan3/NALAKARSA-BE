@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"nalakarsa/internal/common/constant"
+	"nalakarsa/internal/config"
 	"nalakarsa/internal/contentfilter"
 	"nalakarsa/internal/dto"
 	"nalakarsa/internal/model"
@@ -14,6 +15,7 @@ import (
 	notificationrepository "nalakarsa/internal/repository/notification"
 	projectrepository "nalakarsa/internal/repository/project"
 	userrepository "nalakarsa/internal/repository/user"
+	"nalakarsa/internal/utils"
 
 	"github.com/google/uuid"
 )
@@ -38,6 +40,7 @@ type userService struct {
 	connRepo  connectionrepository.ConnectionRepository
 	projRepo  projectrepository.ProjectRepository
 	notifRepo notificationrepository.NotificationRepository
+	cfg       *config.Config
 }
 
 func NewUserService(
@@ -45,17 +48,43 @@ func NewUserService(
 	connRepo connectionrepository.ConnectionRepository,
 	projRepo projectrepository.ProjectRepository,
 	notifRepo notificationrepository.NotificationRepository,
+	cfg *config.Config,
 ) UserService {
 	return &userService{
 		userRepo:  userRepo,
 		connRepo:  connRepo,
 		projRepo:  projRepo,
 		notifRepo: notifRepo,
+		cfg:       cfg,
 	}
 }
 
 func (s *userService) ResolveUser(identifier string) (*model.User, error) {
 	return s.userRepo.GetByIDOrIdentifier(identifier)
+}
+
+func (s *userService) avatarURL(userID uuid.UUID, raw string) string {
+	if s.cfg == nil {
+		return raw
+	}
+	trimmed := strings.TrimPrefix(strings.TrimSpace(raw), "/")
+	if trimmed != "" {
+		if strings.HasPrefix(trimmed, "users/") {
+			return utils.NormalizeSupabasePublicURL(trimmed, s.cfg.SupabaseAssetBucket, s.cfg)
+		}
+		return utils.NormalizeSupabasePublicURL(raw, s.cfg.SupabaseStorageBucket, s.cfg)
+	}
+
+	// Older uploads can exist in Storage while users.avatar_url is empty.
+	// Discover the newest avatar and persist it so subsequent reads are cheap.
+	prefix := fmt.Sprintf("users/%s/avatars", userID)
+	discoveredURL, err := utils.FindLatestPublicObjectURL(prefix, s.cfg.SupabaseAssetBucket, s.cfg)
+	if err == nil && discoveredURL != "" {
+		if updateErr := s.userRepo.UpdateAvatar(userID, discoveredURL); updateErr == nil {
+			return discoveredURL
+		}
+	}
+	return ""
 }
 
 func (s *userService) GetProfile(userID uuid.UUID) (*dto.UserResponse, error) {
@@ -67,7 +96,7 @@ func (s *userService) GetProfile(userID uuid.UUID) (*dto.UserResponse, error) {
 		return nil, errors.New("user not found")
 	}
 
-	return toUserResponse(u), nil
+	return s.toUserResponse(u), nil
 }
 
 func (s *userService) GetPublicProfile(userID uuid.UUID) (*dto.UserProfileStatsResponse, error) {
@@ -87,7 +116,7 @@ func (s *userService) GetPublicProfile(userID uuid.UUID) (*dto.UserProfileStatsR
 	projCount, _ := s.projRepo.CountByOwner(userID, "")
 	discCount, _ := s.userRepo.CountDiscussions(userID)
 
-	profile := toUserResponse(u)
+	profile := s.toUserResponse(u)
 	return &dto.UserProfileStatsResponse{
 		UserResponse: *profile,
 		Stats: dto.ProfileStats{
@@ -192,7 +221,7 @@ func (s *userService) ListUsers(search, role string, page, limit int) ([]dto.Use
 
 	res := make([]dto.UserResponse, len(users))
 	for i, u := range users {
-		res[i] = *toUserResponse(&u)
+		res[i] = *s.toUserResponse(&u)
 	}
 
 	return res, total, nil
@@ -331,7 +360,8 @@ func (s *userService) GetFollowers(currentUserID *uuid.UUID, targetUserID uuid.U
 			FullName:    u.FullName,
 			Role:        u.Role,
 			Affiliation: u.Affiliation,
-			AvatarURL:   u.AvatarURL,
+			AvatarURL:   s.avatarURL(u.ID, u.AvatarURL),
+			AvatarUrl:   s.avatarURL(u.ID, u.AvatarURL),
 			IsFollowing: isFollowing,
 		}
 	}
@@ -364,7 +394,8 @@ func (s *userService) GetFollowing(currentUserID *uuid.UUID, targetUserID uuid.U
 			FullName:    u.FullName,
 			Role:        u.Role,
 			Affiliation: u.Affiliation,
-			AvatarURL:   u.AvatarURL,
+			AvatarURL:   s.avatarURL(u.ID, u.AvatarURL),
+			AvatarUrl:   s.avatarURL(u.ID, u.AvatarURL),
 			IsFollowing: isFollowing,
 		}
 	}
@@ -372,7 +403,7 @@ func (s *userService) GetFollowing(currentUserID *uuid.UUID, targetUserID uuid.U
 	return res, total, nil
 }
 
-func toUserResponse(u *model.User) *dto.UserResponse {
+func (s *userService) toUserResponse(u *model.User) *dto.UserResponse {
 	middleName := ""
 	if u.MiddleName != nil {
 		middleName = *u.MiddleName
@@ -381,6 +412,7 @@ func toUserResponse(u *model.User) *dto.UserResponse {
 	if u.EmailVerifiedAt != nil {
 		onboardingStatus = "completed"
 	}
+	avatarURL := s.avatarURL(u.ID, u.AvatarURL)
 	return &dto.UserResponse{
 		ID:                  u.ID,
 		Email:               u.Email,
@@ -397,7 +429,8 @@ func toUserResponse(u *model.User) *dto.UserResponse {
 		Expertise:           u.Expertise,
 		Industry:            u.Industry,
 		Bio:                 u.Bio,
-		AvatarURL:           u.AvatarURL,
+		AvatarURL:           avatarURL,
+		AvatarUrl:           avatarURL,
 		Mission:             u.Mission,
 		EmailVerified:       u.EmailVerifiedAt != nil,
 		ViewCount:           int64(u.ViewCount),
